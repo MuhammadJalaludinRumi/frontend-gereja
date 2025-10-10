@@ -1,9 +1,10 @@
 // composables/useAuth.ts
 export const useAuth = () => {
+  const isProd = process.env.NODE_ENV === 'production'
   const user = ref(null)
   const token = useCookie('token', {
-    secure: true,
-    sameSite: 'strict',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: 60 * 60 * 24 * 7
   })
 
@@ -16,7 +17,8 @@ export const useAuth = () => {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: { username, password } // ganti email jadi username
+        body: { username, password },
+        credentials: 'include' // ganti email jadi username
       })
 
       // Save token
