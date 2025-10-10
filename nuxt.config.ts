@@ -27,6 +27,12 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+
+  vite: {
+    server: {
+      allowedHosts: ['erp.gkpawiligar.org']
+    }
   }
 })
 //ANJAY
