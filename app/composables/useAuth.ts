@@ -12,7 +12,7 @@ export const useAuth = () => {
     try {
       const response = await $fetch<{ token: string, user: any }>('/api/login', {
         method: 'POST',
-        baseURL: 'http://gkpawiligar.org',
+        baseURL: 'http://localhost:8000',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
