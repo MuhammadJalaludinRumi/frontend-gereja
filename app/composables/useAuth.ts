@@ -1,32 +1,46 @@
 // composables/useAuth.ts
-import { ref, readonly, computed } from 'vue'
+import { ref, readonly, computed, watch } from 'vue'
 import { useCookie } from '#app'
 import { useApiUrl } from './useApiUrl'
 
 export const useAuth = () => {
-  const apiBase = useApiUrl()
+  const apiBase = useApiUrl() // ambil baseURL dari config
   const isProd = process.env.NODE_ENV === 'production'
 
   const user = ref<any>(null)
-  const token = useCookie('token', {
-    secure: isProd ? import.meta.env.SESSION_SECURE_COOKIE === 'true' : false,
-    sameSite: import.meta.env.SESSION_SAME_SITE || (isProd ? 'lax' : 'lax'),
+
+  // cookie dev-friendly
+  const tokenCookie = useCookie('token', {
+    secure: false, // dev-safe
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7
   })
+
+  // fallback ke localStorage kalau cookie kosong
+  const token = ref<string>(tokenCookie.value || localStorage.getItem('token') || '')
+
+  // sync token ke cookie & localStorage setiap berubah
+  watch(token, (t) => {
+    tokenCookie.value = t || null
+    if (t) localStorage.setItem('token', t)
+    else localStorage.removeItem('token')
+  })
+
+  const setToken = (t: string | null) => {
+    token.value = t || ''
+  }
 
   const login = async (username: string, password: string) => {
     try {
       const response = await $fetch<{ token: string; user: any }>('/login', {
         baseURL: apiBase,
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json'
-        },
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: { username, password },
         credentials: 'include'
       })
-      token.value = response.token
+
+      setToken(response.token)
       user.value = response.user
       return response
     } catch (error: any) {
@@ -40,29 +54,21 @@ export const useAuth = () => {
     try {
       const userData = await $fetch('/me', {
         baseURL: apiBase,
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-          Accept: 'application/json'
-        },
+        headers: { Authorization: `Bearer ${token.value}`, Accept: 'application/json' },
         credentials: 'include'
       })
       user.value = userData.user || userData
       return user.value
     } catch (error) {
       console.error('Fetch user error:', error)
-      token.value = null
+      setToken(null)
       user.value = null
       return null
     }
   }
 
-  const logout = async () => {
-    try {
-      await $fetch('/logout', { baseURL: apiBase, method: 'POST', credentials: 'include' })
-    } catch (err) {
-      console.warn('Logout API error, tetap clear token')
-    }
-    token.value = null
+  const logout = () => {
+    setToken(null)
     user.value = null
     return navigateTo('/login')
   }
@@ -82,6 +88,3 @@ export const useAuth = () => {
     logout
   }
 }
-
-
-//perbaikan token
