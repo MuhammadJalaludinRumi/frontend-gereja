@@ -1,8 +1,11 @@
+// nuxt.config.ts
 export default defineNuxtConfig({
-  ssr: false,
+  ssr: false, // SPA mode
+
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:8000/api'
+      // Ambil dari env NUXT_PUBLIC_API_BASE, fallback ke localhost
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api'
     }
   },
 
@@ -31,8 +34,17 @@ export default defineNuxtConfig({
 
   vite: {
     server: {
-      allowedHosts: ['erp.gkpawiligar.org']
+      // Dev: allow localhost & dev host, Prod nanti ga dipakai karena build
+      allowedHosts: ['localhost', 'erp.gkpawiligar.org'],
+      // Optional proxy untuk development biar ga kena CORS
+      proxy: {
+        '/api': {
+          target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, '')
+        }
+      }
     }
   }
 })
-//ANJAY
