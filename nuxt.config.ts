@@ -1,11 +1,10 @@
-// nuxt.config.ts
 export default defineNuxtConfig({
   ssr: false, // SPA mode
 
   runtimeConfig: {
     public: {
       // Ambil dari env NUXT_PUBLIC_API_BASE, fallback ke localhost
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api'
+      apiBase: import.meta.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api'
     }
   },
 
