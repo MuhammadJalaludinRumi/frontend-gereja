@@ -43,18 +43,6 @@ export function useUsers() {
     }
   }
 
-  const loading = ref(false)
-
-  const fetchWithoutAuthority = async () => {
-    loading.value = true
-    try {
-      const res = await $fetch('http://localhost:8000/api/users/without-authority')
-      users.value = Array.isArray(res) ? res : []
-    } finally {
-      loading.value = false
-    }
-  }
-
   const deleteUser = async (id: number) => {
     await $fetch(`${api}/users/${id}`, {
       method: 'DELETE'
@@ -62,5 +50,5 @@ export function useUsers() {
     await fetchUsers()
   }
 
-  return { users, fetchUsers, createUser, updateUser, fetchWithoutAuthority, deleteUser }
+  return { users, fetchUsers, createUser, updateUser, deleteUser }
 }

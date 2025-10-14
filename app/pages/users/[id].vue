@@ -14,18 +14,23 @@ const user = ref({
   password: '',
   name: '',
   is_active: 1,
-  role_id: 1
+  role_id: null
 })
 
+const roles = ref<any[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 onMounted(async () => {
   try {
-    const { data } = await useFetch(`${api}/users/${route.params.id}`)
-    user.value = data.value
+    const [{ data: userData }, { data: rolesData }] = await Promise.all([
+      useFetch(`${api}/users/${route.params.id}`),
+      useFetch(`${api}/roles`)
+    ])
+    user.value = userData.value
+    roles.value = rolesData.value || []
   } catch (err) {
-    error.value = 'Gagal memuat data user'
+    error.value = 'Gagal memuat data user atau role'
   }
 })
 
@@ -44,19 +49,25 @@ const save = async () => {
 
 <template>
   <div class="p-6 w-full" style="color: var(--ui-text); background: var(--ui-bg);">
-    <UCard class="max-w-lg mx-auto">
-      <h1 class="text-2xl font-bold mb-4">Edit Pengguna</h1>
+    <UCard class="max-w-lg mx-auto shadow-md">
+      <h1 class="text-2xl font-bold mb-4" style="color: var(--ui-text-highlighted);">
+        Edit Pengguna
+      </h1>
 
       <form @submit.prevent="save" class="flex flex-col gap-4">
         <UInput v-model="user.username" placeholder="Username" />
-        <UInput
-          v-model="user.password"
-          type="password"
-          placeholder="Password baru (opsional)"
-        />
+        <UInput v-model="user.password" type="password" placeholder="Password baru (opsional)" />
         <UInput v-model="user.name" placeholder="Nama Lengkap" />
-        <UInput v-model.number="user.role_id" type="number" placeholder="Role ID" />
 
+        <!-- Dropdown Role -->
+        <select v-model="user.role_id" class="border p-2 rounded">
+          <option disabled value="">Pilih Role</option>
+          <option v-for="role in roles" :key="role.id" :value="role.id">
+            {{ role.name }}
+          </option>
+        </select>
+
+        <!-- Status -->
         <select v-model="user.is_active" class="border p-2 rounded">
           <option :value="1">Active</option>
           <option :value="0">Inactive</option>
