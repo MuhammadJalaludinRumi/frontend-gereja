@@ -1,6 +1,7 @@
 import { ref, readonly, computed } from 'vue'
 import { useCookie } from '#app'
 import { useApiUrl } from './useApiUrl'
+import { navigateTo } from '#app'
 
 export const useAuth = () => {
   const apiBase = useApiUrl()
@@ -15,7 +16,7 @@ export const useAuth = () => {
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await $fetch<{ token: string; user: any }>('/login', {
+      const response = await $fetch<{ token?: string; user: any }>('/login', {
         baseURL: apiBase,
         method: 'POST',
         headers: {
@@ -23,10 +24,13 @@ export const useAuth = () => {
           'Content-Type': 'application/json'
         },
         body: { username, password },
-        credentials: 'include'
+        credentials: 'include' // biar cookie otomatis dikirim
       })
-      token.value = response.token
+
+      // di prod backend pake cookie, di dev pake Bearer
+      if (!isProd) token.value = response.token
       user.value = response.user
+
       return response
     } catch (error: any) {
       console.error('Login error:', error)
@@ -35,21 +39,23 @@ export const useAuth = () => {
   }
 
   const fetchUser = async () => {
-    if (!token.value) return null
     try {
+      const headers: Record<string, string> = { Accept: 'application/json' }
+      // di dev, tambahin Bearer header
+      if (!isProd && token.value) headers['Authorization'] = `Bearer ${token.value}`
+
       const userData = await $fetch('/me', {
         baseURL: apiBase,
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-          Accept: 'application/json'
-        },
-        credentials: 'include'
+        headers,
+        credentials: 'include' // cookie tetap dikirim di prod
       })
+
       user.value = userData.user || userData
       return user.value
     } catch (error) {
       console.error('Fetch user error:', error)
-      token.value = null
+      if (!isProd) token.value = null
+      user.value = null
       return null
     }
   }
@@ -65,7 +71,7 @@ export const useAuth = () => {
     return navigateTo('/login')
   }
 
-  const isLoggedIn = computed(() => !!token.value && !!user.value && user.value?.is_active)
+  const isLoggedIn = computed(() => !!user.value && user.value?.is_active)
   const isSuperAdmin = computed(() => user.value?.role_id === 1)
   const isActive = computed(() => user.value?.is_active === 1)
 
