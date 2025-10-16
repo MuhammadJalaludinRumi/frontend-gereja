@@ -41,13 +41,20 @@ export const useAuth = () => {
   const fetchUser = async () => {
     try {
       const headers: Record<string, string> = { Accept: 'application/json' }
-      // di dev, tambahin Bearer header
-      if (!isProd && token.value) headers['Authorization'] = `Bearer ${token.value}`
+      const xsrfToken = useCookie('XSRF-TOKEN').value
+
+      if (!isProd && token.value) {
+        headers['Authorization'] = `Bearer ${token.value}`
+      }
+
+      if (isProd && xsrfToken) {
+        headers['X-XSRF-TOKEN'] = xsrfToken
+      }
 
       const userData = await $fetch('/me', {
         baseURL: apiBase,
         headers,
-        credentials: 'include' // cookie tetap dikirim di prod
+        credentials: 'include' // cookie dikirim di prod
       })
 
       user.value = userData.user || userData
@@ -59,6 +66,7 @@ export const useAuth = () => {
       return null
     }
   }
+
 
   const logout = async () => {
     try {
