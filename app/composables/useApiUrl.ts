@@ -1,6 +1,9 @@
 // useApiUrl.ts
 export const useApiUrl = () => {
+<<<<<<< Updated upstream
   const config = useRuntimeConfig()
+=======
+>>>>>>> Stashed changes
   return config.public.apiBase || 'http://localhost:8000/api'
 }
 
