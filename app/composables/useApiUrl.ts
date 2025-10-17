@@ -1,10 +1,12 @@
 // useApiUrl.ts
 export const useApiUrl = () => {
-<<<<<<< Updated upstream
   const config = useRuntimeConfig()
-=======
->>>>>>> Stashed changes
-  return config.public.apiBase || 'http://localhost:8000/api'
+  let baseUrl = config.public.apiBase || 'http://localhost:8000'
+  // Pastikan selalu pakai /api
+  if (!baseUrl.endsWith('/api')) {
+    baseUrl = `${baseUrl.replace(/\/$/, '')}/api`
+  }
+  return baseUrl
 }
 
 export const useSanctumUrl = () => {

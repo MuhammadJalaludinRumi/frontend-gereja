@@ -8,11 +8,12 @@ export const useAuth = () => {
   const isProd = process.env.NODE_ENV === 'production'
   const user = ref<any>(null)
   const token = useCookie('token', { secure: false, sameSite: 'lax', maxAge: 60*60*24*7 }) // hanya dev
+  const sanctumBase = useSanctumUrl()
 
   const login = async (username: string, password: string) => {
     if (isProd) {
       // fetch csrf cookie
-      await $fetch('/sanctum/csrf-cookie', { baseURL: apiBase, credentials: 'include' })
+      await $fetch('/sanctum/csrf-cookie', { baseURL: sanctumBase, credentials: 'include' })
 
       const response = await $fetch('/login', {
         baseURL: apiBase,

@@ -17,6 +17,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     if (!isLoggedIn.value) {
       console.log('[auth.global] fetch user...')
       const user = await fetchUser()
+      console.log('fetchUser response:', user)
+
 
       if (!user || !user.is_active) {
         console.log('[auth.global] user tidak valid atau tidak aktif, redirect ke login')
