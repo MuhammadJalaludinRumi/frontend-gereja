@@ -1,5 +1,13 @@
+// useApiUrl.ts
 export const useApiUrl = () => {
-  return import.meta.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api'
+  const config = useRuntimeConfig()
+  return config.public.apiBase || 'http://localhost:8000/api'
 }
 
+export const useSanctumUrl = () => {
+  const config = useRuntimeConfig()
+  const apiBase = config.public.apiBase || 'http://localhost:8000'
+  // Buang '/api' di akhir kalau ada
+  return apiBase.replace(/\/api$/, '')
+}
 //perbaikan token

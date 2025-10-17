@@ -4,8 +4,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      // Ambil dari env NUXT_PUBLIC_API_BASE, fallback ke localhost
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE
     }
   },
 
