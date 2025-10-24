@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useInvoices, type Invoice } from '~/composables/useInvoices'
-import { useRoute, useRouter, useRuntimeConfig } from '#app'
+import { useRoute, useRouter } from '#app'
+import { useApiUrl } from '~/composables/useApiUrl'
 
 const route = useRoute()
 const router = useRouter()
-const config = useRuntimeConfig()
-const { updateInvoice } = useInvoices()
+const apiBase = useApiUrl()
+const { update } = useInvoices() // ✅ sesuaikan sama fungsi di useInvoices.ts
 
 const form = ref<Invoice>({
   organization_id: 0,
@@ -21,44 +22,52 @@ const saving = ref(false)
 const serverError = ref<string | null>(null)
 const organizationName = ref('')
 
+// ambil cookie dan header sesuai logic di useInvoices
+const getHeaders = () => {
+  const xsrfToken = useCookie('XSRF-TOKEN')
+  const token = useCookie('token')
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  }
+
+  if (token.value) headers['Authorization'] = `Bearer ${token.value}`
+  if (xsrfToken.value) headers['X-XSRF-TOKEN'] = xsrfToken.value
+  return headers
+}
+
+// fetch data invoice
 const fetchInvoice = async () => {
   try {
-    const { data, error } = await useFetch<Invoice>(
-      `${config.public.apiBase}/invoices/${route.params.id}`
-    )
+    const res = await $fetch<Invoice>(`/invoices/${route.params.id}`, {
+      baseURL: apiBase,
+      headers: getHeaders(),
+      credentials: 'include'
+    })
 
-    if (error.value) {
-      serverError.value = 'Data invoice tidak ditemukan.'
-      router.push('/invoices')
-      return
+    form.value = {
+      organization_id: res.organization_id,
+      date: res.date?.replace(' ', 'T') || '',
+      current_expiry: res.current_expiry?.replace(' ', 'T') || '',
+      new_expiry: res.new_expiry?.replace(' ', 'T') || '',
+      total: res.total
     }
 
-    if (data.value) {
-      form.value = {
-        organization_id: data.value.organization_id,
-        date: data.value.date,
-        current_expiry: data.value.current_expiry
-          ? data.value.current_expiry.replace(' ', 'T')
-          : '',
-        new_expiry: data.value.new_expiry
-          ? data.value.new_expiry.replace(' ', 'T')
-          : '',
-        total: data.value.total
-      }
-
-      // ambil nama organisasi (optional)
-      try {
-        const orgRes = await $fetch(
-          `${config.public.apiBase}/organizations/${data.value.organization_id}`
-        )
-        organizationName.value = orgRes?.name || `Org #${data.value.organization_id}`
-      } catch {
-        organizationName.value = `Org #${data.value.organization_id}`
-      }
+    // ambil nama organization
+    try {
+      const org = await $fetch(`/organizations/${res.organization_id}`, {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+      organizationName.value = org?.name || `Org #${res.organization_id}`
+    } catch {
+      organizationName.value = `Org #${res.organization_id}`
     }
-  } catch (e) {
-    console.error(e)
-    serverError.value = 'Gagal mengambil data invoice.'
+  } catch (err) {
+    console.error('Fetch invoice error:', err)
+    serverError.value = 'Gagal memuat data invoice.'
+    router.push('/invoices')
   } finally {
     loading.value = false
   }
@@ -70,16 +79,17 @@ const submit = async () => {
   serverError.value = null
   saving.value = true
   try {
-    await updateInvoice(Number(route.params.id), form.value)
+    await update(Number(route.params.id), form.value)
     router.push('/invoices')
-  } catch (e: any) {
-    console.error(e)
-    serverError.value = e.message || 'Gagal memperbarui invoice.'
+  } catch (err: any) {
+    console.error('Submit error:', err)
+    serverError.value = err.message || 'Gagal memperbarui invoice.'
   } finally {
     saving.value = false
   }
 }
 </script>
+
 
 <template>
   <div

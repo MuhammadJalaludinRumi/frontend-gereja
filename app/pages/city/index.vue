@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useCities } from '~/composables/useCity'
+import { useProvinces } from '~/composables/useProvince'
 
-const apiCity = 'http://localhost:8000/api/city'
-const apiProvince = 'http://localhost:8000/api/province'
+const { cities, fetchAll: fetchCities, create: createCity, remove: removeCity } = useCities()
+const { provinces, fetchAll: fetchProvinces } = useProvinces()
 
-// State
-const cities = ref<any[]>([])
-const provinces = ref<any[]>([])
 const name = ref('')
 const province = ref('')
 const search = ref('')
@@ -15,15 +14,7 @@ const search = ref('')
 const showDeleteModal = ref(false)
 const deleteTarget = ref<any | null>(null)
 
-const fetchCities = async () => {
-  cities.value = await $fetch(apiCity)
-}
-
-const fetchProvinces = async () => {
-  provinces.value = await $fetch(apiProvince)
-}
-
-// 🧠 live search computed
+// Live search
 const filteredCities = computed(() => {
   if (!search.value) return cities.value
   const keyword = search.value.toLowerCase()
@@ -39,12 +30,9 @@ const addCity = async () => {
     return
   }
 
-  await $fetch(apiCity, {
-    method: 'POST',
-    body: {
-      name: name.value,
-      province: province.value
-    }
+  await createCity({
+    name: name.value,
+    province: province.value
   })
 
   name.value = ''
@@ -52,7 +40,6 @@ const addCity = async () => {
   await fetchCities()
 }
 
-// ganti confirm browser dengan modal
 const openDeleteModal = (city: any) => {
   deleteTarget.value = city
   showDeleteModal.value = true
@@ -60,7 +47,7 @@ const openDeleteModal = (city: any) => {
 
 const confirmDelete = async () => {
   if (!deleteTarget.value) return
-  await $fetch(`${apiCity}/${deleteTarget.value.id}`, { method: 'DELETE' })
+  await removeCity(deleteTarget.value.id)
   showDeleteModal.value = false
   deleteTarget.value = null
   await fetchCities()

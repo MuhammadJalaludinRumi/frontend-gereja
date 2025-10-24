@@ -1,18 +1,34 @@
 <script setup lang="ts">
-import { useOrganizations } from '~/composables/useOrganizations'
-import { onMounted, reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useOrganizations } from '~/composables/useOrganizations'
+import { useCookie, useRuntimeConfig } from '#app'
 
-const { createOrganization } = useOrganizations()
+const { create } = useOrganizations() // ✅ pake nama yang sama di composable
 const router = useRouter()
 
+// Auth / ACL headers
+const config = useRuntimeConfig()
+const isProd = config.public.sessionSecureCookie === 'true'
+const xsrfToken = useCookie('XSRF-TOKEN').value
+const token = useCookie('token').value
+
+const getHeaders = (isFormData = false) => {
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (!isFormData) headers['Content-Type'] = 'application/json'
+  if (xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
+  if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
+// Form reactive
 const form = reactive({
   name: '',
   abbreviation: '',
   address: '',
   city: '',
-  latitude: null,
-  longitude: null,
+  latitude: null as number | null,
+  longitude: null as number | null,
   phone: '',
   email: '',
   group_id: '',
@@ -22,76 +38,60 @@ const form = reactive({
   legal: '',
 })
 
-const cities = ref([])
-const groups = ref([])
+const cities = ref<any[]>([])
+const groups = ref<any[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
-const selectedCity = computed(() => {
-  return cities.value.find((c: any) => c.id === Number(form.city))
-})
+const selectedCity = computed(() => cities.value.find(c => c.id === Number(form.city)))
+const selectedGroup = computed(() => groups.value.find(g => g.id === Number(form.group_id)))
 
-const selectedGroup = computed(() => {
-  return groups.value.find((g: any) => g.id === Number(form.group_id))
-})
+// Logo handling
+const logoFile = ref<File | null>(null)
+const logoPreview = ref<string | null>(null)
+const onFileChange = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0] || null
+  logoFile.value = file
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => (logoPreview.value = e.target?.result as string)
+    reader.readAsDataURL(file)
+  } else logoPreview.value = null
+}
 
+// Fetch cities & groups with ACL headers
 onMounted(async () => {
   try {
-    // Load cities
-    const citiesRes = await $fetch('http://localhost:8000/api/city')
+    const [citiesRes, groupsRes] = await Promise.all([
+      $fetch('/city', { baseURL: 'http://localhost:8000/api', headers: getHeaders(), credentials: 'include' }),
+      $fetch('/groups', { baseURL: 'http://localhost:8000/api', headers: getHeaders(), credentials: 'include' }),
+    ])
     cities.value = citiesRes || []
-
-    // Load groups (yayasan)
-    const groupsRes = await $fetch('http://localhost:8000/api/groups')
     groups.value = groupsRes || []
-  } catch (err: any) {
+  } catch (err) {
     console.error(err)
-    serverError.value = 'Gagal memuat data'
+    serverError.value = 'Gagal memuat data cities atau groups'
   } finally {
     loading.value = false
   }
 })
 
-const logoFile = ref<File | null>(null)
-const logoPreview = ref<string | null>(null)
-
-const onFileChange = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0] || null
-  logoFile.value = file
-
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      logoPreview.value = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
-  } else {
-    logoPreview.value = null
-  }
-}
-
-const formatForInputDate = (datetime: string) => {
-  if (!datetime) return ''
-  return datetime.split(' ')[0]
-}
-
+// Save form
 const save = async () => {
   serverError.value = null
-
   if (!form.name) {
     serverError.value = 'Nama organization wajib diisi'
     return
   }
 
   saving.value = true
-
   try {
     const fd = new FormData()
-    Object.entries(form).forEach(([key, val]) => fd.append(key, val || ''))
+    Object.entries(form).forEach(([key, val]) => fd.append(key, val ?? ''))
     if (logoFile.value) fd.append('logo', logoFile.value)
 
-    await createOrganization(fd)
+    await create(fd) // ✅ pake composable create
     router.push('/organizations')
   } catch (err: any) {
     console.error('Submit error:', err)
@@ -256,7 +256,9 @@ const save = async () => {
             <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
               Founded Date
             </label>
-            <input v-model="form.founded" type="date" readonly class="w-full px-3 py-2 ..." />
+            <input v-model="form.founded" type="date"
+              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
           </div>
 
           <div>
@@ -291,8 +293,7 @@ const save = async () => {
         <span class="text-blue-400 text-lg">ℹ️</span>
         <div class="text-sm" style="color: var(--ui-text-dimmed);">
           <p class="font-semibold mb-1" style="color: var(--ui-text);">Note:</p>
-          <p>Field yang ditandai dengan <span class="text-red-500">*</span> wajib diisi. Logo akan di-upload otomatis
-            saat form disimpan.</p>
+          <p>Field yang ditandai dengan <span class="text-red-500">*</span> wajib diisi. Logo akan di-upload otomatis saat form disimpan.</p>
         </div>
       </div>
     </UCard>

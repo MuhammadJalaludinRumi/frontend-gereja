@@ -1,56 +1,52 @@
-<!-- pages/role/[id].vue -->
 <script setup lang="ts">
-import { reactive, ref, onMounted, computed } from 'vue'
+import { reactive, ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRoles } from '~/composables/useRoles'
 import { useOrganizations } from '~/composables/useOrganizations'
 
 const route = useRoute()
 const router = useRouter()
-const { roles, updateRole } = useRoles()
-const { getOrganizations } = useOrganizations()
 
+// composables
+const { role, fetchById: fetchRoleById, update: updateRole, loading: roleLoading, error: roleError } = useRoles()
+const { organizations, fetchAll: fetchOrganizations, loading: orgsLoading, error: orgsError } = useOrganizations()
+
+// form reactive
 const form = reactive({
   name: '',
   organization_id: null as number | null,
 })
 
-const organizations = ref<{ id: number; name: string }[]>([])
-const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
+// computed selected org
 const selectedOrg = computed(() =>
   organizations.value.find(o => o.id === form.organization_id)
 )
 
+// fetch data awal
 onMounted(async () => {
-  loading.value = true
   try {
-    const api = useRuntimeConfig().public.apiBase
     const id = Number(route.params.id)
+    await fetchRoleById(id)
+    if (role.value) {
+      form.name = role.value.name
+      form.organization_id = role.value.organization_id
+    }
 
-    // ambil role by id pake useFetch
-    const { data, error } = await useFetch(`${api}/roles/${id}`)
-    if (error.value || !data.value) throw new Error(error.value?.message || 'Role tidak ditemukan')
-
-    form.name = data.value.name
-    form.organization_id = data.value.organization_id
-
-    // ambil organization buat dropdown
-    const orgs = await getOrganizations()
-    organizations.value = Array.isArray(orgs) ? orgs.sort((a, b) => a.name.localeCompare(b.name)) : []
+    await fetchOrganizations()
+    organizations.value.sort((a, b) => a.name.localeCompare(b.name))
   } catch (err: any) {
     console.error(err)
     serverError.value = err.message || 'Gagal memuat data'
-  } finally {
-    loading.value = false
   }
 })
 
+// submit update
 const updateData = async () => {
   serverError.value = null
-  if (!form.name) {
+  if (!form.name.trim()) {
     serverError.value = 'Name wajib diisi'
     return
   }
@@ -63,7 +59,7 @@ const updateData = async () => {
   try {
     const id = Number(route.params.id)
     await updateRole(id, {
-      name: form.name,
+      name: form.name.trim(),
       organization_id: form.organization_id,
     })
     router.push('/roles')
@@ -74,6 +70,12 @@ const updateData = async () => {
     saving.value = false
   }
 }
+
+// watch error composable
+watch([roleError, orgsError], ([rErr, oErr]) => {
+  if (rErr) serverError.value = rErr
+  if (oErr) serverError.value = oErr
+})
 </script>
 
 <template>

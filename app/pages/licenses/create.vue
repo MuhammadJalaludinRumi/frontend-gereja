@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useLicenses } from '~/composables/useLicenses'
 
 const router = useRouter()
-const { createLicense } = useLicenses()
+const { create } = useLicenses() // ✅ ambil function create dari composable
 
 const form = ref({
   name: '',
@@ -21,10 +21,12 @@ const save = async () => {
   }
 
   saving.value = true
+  error.value = null
   try {
-    await createLicense(form.value)
+    await create(form.value)
     router.push('/licenses')
   } catch (err) {
+    console.error(err)
     error.value = 'Gagal menyimpan lisensi'
   } finally {
     saving.value = false

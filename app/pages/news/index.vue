@@ -2,16 +2,36 @@
 import { onMounted } from 'vue'
 import { useNews } from '~/composables/useNews'
 
-const { news, fetchNews, deleteNews } = useNews()
+const { news, fetchAll, remove, loading, error } = useNews()
 
+// Ambil data pas mount
+onMounted(fetchAll)
+
+// Fungsi hapus
 const handleDelete = async (id: number) => {
   if (!confirm('Apakah kamu yakin ingin menghapus berita ini?')) return
-  await deleteNews(id)
+  try {
+    await remove(id)
+    await fetchAll()
+  } catch (err) {
+    console.error('❌ Gagal hapus berita:', err)
+    alert('Gagal menghapus berita')
+  }
 }
 
-onMounted(fetchNews)
-
-const formatDate = (date: string) => (date ? date.split('T')[0] : '-')
+// Format tanggal biar rapi
+const formatDate = (date: string) => {
+  if (!date) return '-'
+  try {
+    return new Date(date).toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch {
+    return date.split('T')[0]
+  }
+}
 </script>
 
 <template>
@@ -33,37 +53,29 @@ const formatDate = (date: string) => (date ? date.split('T')[0] : '-')
       />
     </div>
 
+    <!-- Loading & Error -->
+    <div v-if="loading" class="text-center py-6 text-gray-500">
+      Memuat data berita...
+    </div>
+    <div v-else-if="error" class="text-center py-6 text-red-500">
+      {{ error }}
+    </div>
+
     <!-- Table -->
-    <UCard :ui="{ body: { padding: '' } }" class="relative z-0 overflow-hidden">
+    <UCard
+      v-else
+      :ui="{ body: { padding: '' } }"
+      class="relative z-0 overflow-hidden"
+    >
       <div class="overflow-x-auto w-full">
         <table class="min-w-full table-auto border-collapse">
           <thead>
             <tr>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                ID
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Tanggal
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Judul
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Status
-              </th>
-              <th
-                class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Aksi
-              </th>
+              <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap">ID</th>
+              <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap">Tanggal</th>
+              <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap">Judul</th>
+              <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap">Status</th>
+              <th class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap">Aksi</th>
             </tr>
           </thead>
 
@@ -103,7 +115,7 @@ const formatDate = (date: string) => (date ? date.split('T')[0] : '-')
                     size="xs"
                     color="red"
                     variant="soft"
-                    label="Delete"
+                    label="Hapus"
                   />
                 </div>
               </td>

@@ -2,46 +2,53 @@
 import { ref, onMounted } from 'vue'
 import { useLicenses } from '~/composables/useLicenses'
 
-const licenses = ref<any[]>([])
-const loading = ref(false)
+const { licenses, fetchAll, remove, loading, error } = useLicenses()
+
 const tableHeaders = ['Nama Lisensi', 'Harga (Rp)', 'Dibuat Pada']
+const deleting = ref(false)
 
-const { getLicenses, deleteLicense } = useLicenses()
+// 🔹 Ambil semua data pas pertama kali masuk halaman
+onMounted(async () => {
+  await fetchAll()
+})
 
-// Ambil data lisensi
-const fetchLicenses = async () => {
-  loading.value = true
-  try {
-    const data = await getLicenses()
-    licenses.value = Array.isArray(data) ? data : []
-  } catch (error) {
-    console.error('Gagal memuat data licenses:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-// Hapus lisensi
+// 🔹 Fungsi hapus data
 const handleDelete = async (id: number) => {
-  if (!confirm('Apakah kamu yakin ingin menghapus lisensi ini?')) return
+  if (!confirm('Yakin mau hapus lisensi ini?')) return
+  deleting.value = true
   try {
-    await deleteLicense(id)
-    await fetchLicenses()
-  } catch (error) {
-    console.error('Gagal menghapus lisensi:', error)
+    await remove(id)
+    await fetchAll()
+  } catch (err) {
+    console.error('❌ Error delete license:', err)
+    alert('Gagal menghapus lisensi')
+  } finally {
+    deleting.value = false
   }
 }
 
-const formatDate = (date: string) => (date ? date.split('T')[0] : '-')
-
-onMounted(fetchLicenses)
+// 🔹 Format tanggal jadi YYYY-MM-DD
+const formatDate = (date: string | null) => {
+  if (!date) return '-'
+  try {
+    return new Date(date).toISOString().split('T')[0]
+  } catch {
+    return '-'
+  }
+}
 </script>
 
 <template>
-  <div class="p-6 w-full overflow-hidden" style="color: var(--ui-text); background: var(--ui-bg);">
+  <div
+    class="p-6 w-full overflow-hidden"
+    style="color: var(--ui-text); background: var(--ui-bg);"
+  >
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">
+      <h1
+        class="text-2xl font-bold"
+        style="color: var(--ui-text-highlighted);"
+      >
         Daftar Lisensi
       </h1>
       <UButton
@@ -53,11 +60,37 @@ onMounted(fetchLicenses)
       />
     </div>
 
+    <!-- Error -->
+    <div
+      v-if="error"
+      class="mb-4 px-4 py-3 rounded-lg text-sm"
+      style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444;"
+    >
+      {{ error }}
+    </div>
+
     <!-- Loading -->
-    <div v-if="loading" class="text-gray-500 text-center py-4">Memuat data...</div>
+    <div
+      v-if="loading"
+      class="text-gray-500 text-center py-4"
+    >
+      Memuat data...
+    </div>
+
+    <!-- Empty state -->
+    <div
+      v-else-if="!licenses.length && !error"
+      class="text-gray-500 text-center py-8 italic"
+    >
+      Belum ada data lisensi.
+    </div>
 
     <!-- Table -->
-    <UCard :ui="{ body: { padding: '' } }" class="relative z-0 overflow-hidden">
+    <UCard
+      v-else
+      :ui="{ body: { padding: '' } }"
+      class="relative z-0 overflow-hidden"
+    >
       <div class="overflow-x-auto w-full">
         <table class="min-w-full table-auto border-collapse">
           <thead>
@@ -65,11 +98,15 @@ onMounted(fetchLicenses)
               <th
                 v-for="head in tableHeaders"
                 :key="head"
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
+                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap border-b border-gray-700/20"
               >
                 {{ head }}
               </th>
-              <th class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap">Aksi</th>
+              <th
+                class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap border-b border-gray-700/20"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
 
@@ -77,11 +114,17 @@ onMounted(fetchLicenses)
             <tr
               v-for="license in licenses"
               :key="license.id"
-              class="transition-colors hovered-row"
+              class="transition-colors hover:bg-gray-50/5 border-b border-gray-700/10"
             >
-              <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">{{ license.name }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">Rp {{ license.price.toLocaleString() }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ formatDate(license.created_at) }}</td>
+              <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">
+                {{ license.name }}
+              </td>
+              <td class="px-3 py-3 text-sm whitespace-nowrap">
+                Rp {{ (license.price ?? 0).toLocaleString('id-ID') }}
+              </td>
+              <td class="px-3 py-3 text-sm whitespace-nowrap">
+                {{ formatDate(license.created_at) }}
+              </td>
 
               <td class="px-3 py-3 text-sm whitespace-nowrap text-center">
                 <div class="flex justify-center gap-2">
@@ -94,12 +137,13 @@ onMounted(fetchLicenses)
                     label="Edit"
                   />
                   <UButton
+                    :disabled="deleting"
                     @click.stop="handleDelete(license.id)"
                     icon="i-heroicons-trash"
                     size="xs"
                     color="red"
                     variant="soft"
-                    label="Delete"
+                    label="Hapus"
                   />
                 </div>
               </td>

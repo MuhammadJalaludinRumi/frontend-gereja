@@ -1,42 +1,51 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useLicenses } from '~/composables/useLicenses'
 
-const router = useRouter()
 const route = useRoute()
-const { getLicense, updateLicense } = useLicenses()
+const router = useRouter()
+const { fetchById, update, license, error } = useLicenses()
 
 const form = ref({
   name: '',
-  price: ''
+  price: 0
 })
 
 const saving = ref(false)
-const error = ref<string | null>(null)
 
-const loadLicense = async () => {
+onMounted(async () => {
   try {
-    const data = await getLicense(route.params.id as string)
-    form.value = { name: data.name, price: data.price }
-  } catch (e) {
-    console.error('Gagal memuat lisensi:', e)
+    await fetchById(Number(route.params.id))
+    if (license.value) {
+      form.value.name = license.value.name || ''
+      form.value.price = Number(license.value.price || 0)
+    }
+  } catch (err) {
+    console.error('❌ Gagal memuat data license:', err)
   }
-}
+})
 
-const update = async () => {
+const save = async () => {
+  if (!form.value.name || !form.value.price) {
+    alert('Nama dan harga wajib diisi!')
+    return
+  }
+
   saving.value = true
   try {
-    await updateLicense(route.params.id as string, form.value)
+    await update(Number(route.params.id), {
+      name: form.value.name,
+      price: Number(form.value.price)
+    })
     router.push('/licenses')
   } catch (err) {
-    error.value = 'Gagal memperbarui lisensi'
+    console.error('❌ Error update license:', err)
+    alert('Gagal memperbarui license.')
   } finally {
     saving.value = false
   }
 }
-
-onMounted(loadLicense)
 </script>
 
 <template>
@@ -46,7 +55,7 @@ onMounted(loadLicense)
     </h1>
 
     <UCard class="max-w-md">
-      <form @submit.prevent="update" class="space-y-4">
+      <form @submit.prevent="save" class="space-y-4">
         <div>
           <label class="block mb-1 font-medium">Nama Lisensi</label>
           <UInput v-model="form.name" placeholder="Masukkan nama lisensi" />
@@ -58,8 +67,18 @@ onMounted(loadLicense)
         </div>
 
         <div class="flex gap-3">
-          <UButton type="submit" :loading="saving" color="primary" label="Perbarui" />
-          <UButton color="gray" variant="soft" label="Kembali" @click="router.push('/licenses')" />
+          <UButton
+            type="submit"
+            :loading="saving"
+            color="primary"
+            label="Perbarui"
+          />
+          <UButton
+            color="gray"
+            variant="soft"
+            label="Kembali"
+            @click="router.push('/licenses')"
+          />
         </div>
 
         <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
