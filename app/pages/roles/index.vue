@@ -1,18 +1,25 @@
 <!-- pages/roles/index.vue -->
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoles } from '~/composables/useRoles'
 
 const router = useRouter()
-const { roles, fetchRoles, deleteRole } = useRoles()
+
+const {
+  roles,
+  fetchAll: fetchRoles,
+  remove: deleteRole,
+  loading,
+  error
+} = useRoles()
 
 const search = ref('')
 const hover = ref<number | null>(null)
 const isDeleteModalOpen = ref(false)
 const selectedRole = ref<any | null>(null)
-const errorMessage = ref<string | null>(null)
 const showErrorModal = ref(false)
+const errorMessage = ref<string | null>(null)
 
 const filteredRoles = computed(() => {
   if (!search.value) return roles.value
@@ -41,7 +48,16 @@ const confirmDelete = async () => {
   }
 }
 
+// fetch data awal
 onMounted(() => fetchRoles())
+
+// watch error dari composable
+watch(error, (val) => {
+  if (val) {
+    errorMessage.value = val
+    showErrorModal.value = true
+  }
+})
 </script>
 
 <template>

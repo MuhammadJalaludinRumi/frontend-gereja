@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from '#app'
+import { useRouter } from 'vue-router'
 import { useNews } from '~/composables/useNews'
 
 const router = useRouter()
-const { createNews } = useNews()
+const { create, loading } = useNews()
 
 const form = ref({
-  date_post: '',
+  date_post: new Date().toISOString().split('T')[0], // default hari ini
   title: '',
   content: '',
   thumbnail: '',
@@ -15,28 +15,105 @@ const form = ref({
   status: 1
 })
 
+const saving = ref(false)
+const formError = ref<string | null>(null)
+
 const submit = async () => {
-  await createNews(form.value)
-  router.push('/news')
+  // validasi basic
+  if (!form.value.title.trim() || !form.value.content.trim()) {
+    formError.value = 'Judul dan konten wajib diisi.'
+    return
+  }
+
+  saving.value = true
+  formError.value = null
+
+  try {
+    await create(form.value)
+    router.push('/news')
+  } catch (err) {
+    console.error('❌ Gagal membuat berita:', err)
+    formError.value = 'Gagal menyimpan berita. Coba lagi nanti.'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
 <template>
-  <div class="p-4 max-w-2xl mx-auto">
-    <UCard class="p-6 rounded-2xl shadow-sm bg-[var(--ui-bg)] text-[var(--ui-text)]">
-      <h1 class="text-lg font-semibold mb-4">📰 Tambah Berita</h1>
+  <div class="p-6 w-full" style="color: var(--ui-text); background: var(--ui-bg)">
+    <h1 class="text-2xl font-bold mb-6" style="color: var(--ui-text-highlighted)">
+      Tambah Berita Baru
+    </h1>
 
-      <form @submit.prevent="submit" class="space-y-4">
-        <UInput v-model="form.title" label="Judul Berita" placeholder="Masukkan judul berita" required />
-        <UInput v-model="form.date_post" label="Tanggal Posting" type="datetime-local" required />
-        <UInput v-model="form.content" label="Konten" type="textarea" placeholder="Isi berita..." required />
-        <UInput v-model="form.thumbnail" label="URL Thumbnail" placeholder="https://..." />
-        <UInput v-model="form.image" label="URL Gambar Utama" placeholder="https://..." />
-
-        <div class="flex justify-end gap-2 pt-4">
-          <UButton color="gray" variant="soft" @click="router.push('/news')">Batal</UButton>
-          <UButton type="submit" color="primary">Simpan</UButton>
+    <UCard class="max-w-2xl">
+      <form @submit.prevent="submit" class="space-y-5">
+        <!-- tanggal -->
+        <div>
+          <label class="block mb-1 font-medium">Tanggal Publikasi</label>
+          <UInput v-model="form.date_post" type="date" />
         </div>
+
+        <!-- judul -->
+        <div>
+          <label class="block mb-1 font-medium">Judul Berita</label>
+          <UInput v-model="form.title" placeholder="Masukkan judul berita" />
+        </div>
+
+        <!-- konten -->
+        <div>
+          <label class="block mb-1 font-medium">Konten</label>
+          <UTextarea
+            v-model="form.content"
+            placeholder="Masukkan isi berita"
+            rows="6"
+          />
+        </div>
+
+        <!-- thumbnail -->
+        <div>
+          <label class="block mb-1 font-medium">Thumbnail URL</label>
+          <UInput v-model="form.thumbnail" placeholder="Opsional" />
+        </div>
+
+        <!-- image -->
+        <div>
+          <label class="block mb-1 font-medium">Image URL</label>
+          <UInput v-model="form.image" placeholder="Opsional" />
+        </div>
+
+        <!-- status -->
+        <div>
+          <label class="block mb-1 font-medium">Status</label>
+          <USelect
+            v-model="form.status"
+            :options="[
+              { label: 'Aktif', value: 1 },
+              { label: 'Nonaktif', value: 0 }
+            ]"
+          />
+        </div>
+
+        <!-- actions -->
+        <div class="flex gap-3 pt-4">
+          <UButton
+            type="submit"
+            :loading="saving || loading"
+            color="primary"
+            label="Simpan"
+          />
+          <UButton
+            color="gray"
+            variant="soft"
+            label="Batal"
+            @click="router.push('/news')"
+          />
+        </div>
+
+        <!-- error -->
+        <p v-if="formError" class="text-red-500 text-sm mt-2">
+          {{ formError }}
+        </p>
       </form>
     </UCard>
   </div>

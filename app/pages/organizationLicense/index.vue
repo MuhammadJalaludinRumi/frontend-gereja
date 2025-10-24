@@ -1,26 +1,36 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useLicenses } from '~/composables/useLicenses'
 import { useOrganizationLicenses } from '~/composables/useOrganizationLicenses'
 
-const { getAll, remove } = useOrganizationLicenses()
-const licenses = ref<any[]>([])
+const router = useRouter()
+const { licenses, fetchAll: fetchLicenses } = useLicenses()
+const { orgLicenses, fetchAll: fetchOrgLicenses, remove } = useOrganizationLicenses() // <-- ambil ref langsung
 
 const search = ref('')
 const hover = ref<number | null>(null)
-
+const loading = ref(true)
 const isDeleteModalOpen = ref(false)
 const selectedLicenseId = ref<number | null>(null)
 
 const fetchData = async () => {
-  licenses.value = await getAll()
+  loading.value = true
+  try {
+    await fetchLicenses()         // pastikan licenses terisi dulu
+    await fetchOrgLicenses()      // ini otomatis update orgLicenses.value
+  } catch (err) {
+    console.error(err)
+  } finally {
+    loading.value = false
+  }
 }
 
 const filteredLicenses = computed(() => {
-  if (!search.value) return licenses.value
+  if (!search.value) return orgLicenses.value
   const keyword = search.value.toLowerCase()
-  return licenses.value.filter(l =>
-    l.organization?.name?.toLowerCase().includes(keyword) ||
-    l.license?.name?.toLowerCase().includes(keyword) ||
+  return orgLicenses.value.filter(l =>
+    l.license_name?.toLowerCase().includes(keyword) ||
     String(l.id).includes(keyword)
   )
 })
@@ -32,9 +42,13 @@ const openDeleteModal = (id: number) => {
 
 const confirmDelete = async () => {
   if (!selectedLicenseId.value) return
-  await remove(selectedLicenseId.value)
-  isDeleteModalOpen.value = false
-  await fetchData()
+  try {
+    await remove(selectedLicenseId.value)
+    isDeleteModalOpen.value = false
+    await fetchData()
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 onMounted(fetchData)
@@ -54,7 +68,7 @@ onMounted(fetchData)
     <UCard class="mb-6" :ui="{ body: { padding: 'p-4' } }">
       <input
         v-model="search"
-        placeholder="Cari organization / license..."
+        placeholder="Cari license..."
         class="w-full border rounded-lg px-3 py-2 text-sm"
         style="background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text);"
       />
@@ -67,7 +81,6 @@ onMounted(fetchData)
           <thead style="background: var(--ui-bg-muted); border-bottom: 1px solid var(--ui-border);">
             <tr>
               <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap" style="color: var(--ui-text-highlighted);">ID</th>
-              <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap" style="color: var(--ui-text-highlighted);">Organization</th>
               <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap" style="color: var(--ui-text-highlighted);">License</th>
               <th class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap" style="color: var(--ui-text-highlighted);">Max Member</th>
               <th class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap" style="color: var(--ui-text-highlighted);">Active</th>
@@ -87,13 +100,12 @@ onMounted(fetchData)
               :class="{ 'hovered-row': hover === l.id }"
             >
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ l.id }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap text-blue-400 font-medium">{{ l.organization?.name || '-' }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap text-green-400 font-medium">{{ l.license?.name || '-' }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ l.max_member }}</td>
               <td class="px-3 py-3 text-center whitespace-nowrap">
                 <span
                   class="px-2 py-1 rounded text-xs font-semibold"
-                  :class="l.is_active ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' : 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200'"
+                  :class="l.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                 >
                   {{ l.is_active ? 'Active' : 'Inactive' }}
                 </span>
@@ -108,7 +120,7 @@ onMounted(fetchData)
         </table>
       </div>
 
-      <div v-if="!filteredLicenses.length" class="text-center py-6 text-gray-400">
+      <div v-if="!filteredLicenses.length && !loading" class="text-center py-6 text-gray-400">
         No data found.
       </div>
     </UCard>
@@ -126,8 +138,7 @@ onMounted(fetchData)
 
           <div class="py-4">
             <p style="color: var(--ui-text);">
-              Yakin mau hapus license <strong>{{ licenses.find(l => l.id === selectedLicenseId)?.license?.name }}</strong>
-              dari organization <strong>{{ licenses.find(l => l.id === selectedLicenseId)?.organization?.name }}</strong>?
+              Yakin mau hapus license <strong>{{ orgLicenses.find(l => l.id === selectedLicenseId)?.license?.name }}</strong>?
             </p>
           </div>
 

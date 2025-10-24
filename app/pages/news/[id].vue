@@ -8,7 +8,8 @@ const router = useRouter()
 const config = useRuntimeConfig()
 const { updateNews } = useNews()
 
-const form = ref<News>({
+const form = ref<Partial<News>>({
+  id: undefined,
   date_post: '',
   title: '',
   content: '',
@@ -18,35 +19,44 @@ const form = ref<News>({
 })
 
 const loading = ref(true)
+const errorMessage = ref<string | null>(null)
 
-// 🔧 Fungsi untuk mengubah format tanggal agar cocok dengan input type="datetime-local"
-function formatDateForInput(dateString: string) {
+function formatDateForInput(dateString: string | null | undefined) {
   if (!dateString) return ''
-  // Contoh: "2025-10-09 14:30:00" → "2025-10-09T14:30"
   return dateString.replace(' ', 'T').slice(0, 16)
 }
 
 const fetchNews = async () => {
   try {
-    const { data, error } = await useFetch<News>(`${config.public.apiBase}/news/${route.params.id}`)
-    if (error.value) {
-      console.error(error.value)
-      router.push('/news')
-      return
+    const { data, error } = await useFetch(`${config.public.apiBase}/news/${route.params.id}`, {
+      headers: { Accept: 'application/json' }
+    })
+
+    if (error.value) throw error.value
+    if (!data.value) throw new Error('Data berita tidak ditemukan.')
+
+    console.log('🟩 DATA DARI API:', data.value) // 🔍 debug sini bro
+
+    // --- test ambil struktur ---
+    const possibleData = (data.value as any).data ?? data.value
+    console.log('🟨 DATA PARSED:', possibleData)
+
+    const news = possibleData
+
+    form.value = {
+      id: news.id,
+      date_post: formatDateForInput(news.date_post),
+      title: news.title || '',
+      content: news.content || '',
+      thumbnail: news.thumbnail || '',
+      image: news.image || '',
+      status: news.status ?? 1
     }
-    if (data.value) {
-      form.value = {
-        id: data.value.id,
-        date_post: formatDateForInput(data.value.date_post),
-        title: data.value.title,
-        content: data.value.content,
-        thumbnail: data.value.thumbnail,
-        image: data.value.image,
-        status: data.value.status
-      }
-    }
-  } catch (e) {
-    console.error(e)
+
+    console.log('✅ FORM TERISI:', form.value)
+  } catch (err) {
+    console.error('❌ Gagal memuat berita:', err)
+    errorMessage.value = 'Gagal memuat berita.'
   } finally {
     loading.value = false
   }
@@ -55,12 +65,22 @@ const fetchNews = async () => {
 onMounted(fetchNews)
 
 const submit = async () => {
-  await updateNews(Number(route.params.id), {
-    ...form.value,
-    // Convert balik ke format database (tanpa "T")
-    date_post: form.value.date_post.replace('T', ' ')
-  })
-  router.push('/news')
+  try {
+    loading.value = true
+    errorMessage.value = null
+
+    await updateNews(Number(route.params.id), {
+      ...form.value,
+      date_post: form.value.date_post?.replace('T', ' ') || ''
+    })
+
+    router.push('/news')
+  } catch (err) {
+    console.error('❌ Gagal update berita:', err)
+    errorMessage.value = 'Gagal memperbarui berita.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -71,20 +91,41 @@ const submit = async () => {
         <h1 class="text-lg font-semibold">✏️ Edit Berita #{{ route.params.id }}</h1>
       </template>
 
-      <div v-if="loading" class="py-8 text-center text-gray-500">Memuat data...</div>
+      <div v-if="loading" class="py-8 text-center text-gray-500">
+        Memuat data...
+      </div>
 
-      <form v-else @submit.prevent="submit" class="space-y-4">
-        <UInput v-model="form.title" label="Judul Berita" placeholder="Masukkan judul berita" required />
-        <UInput v-model="form.date_post" label="Tanggal Posting" type="datetime-local" required />
-        <UInput v-model="form.content" label="Konten" type="textarea" placeholder="Isi berita..." required />
-        <UInput v-model="form.thumbnail" label="URL Thumbnail" placeholder="https://..." />
-        <UInput v-model="form.image" label="URL Gambar Utama" placeholder="https://..." />
+      <div v-else>
+        <form @submit.prevent="submit" class="space-y-4">
+          <UInput v-model="form.title" label="Judul Berita" placeholder="Masukkan judul berita" required />
+          <UInput v-model="form.date_post" label="Tanggal Posting" type="datetime-local" required />
+          <UTextarea v-model="form.content" label="Konten" placeholder="Isi berita..." rows="6" />
+          <UInput v-model="form.thumbnail" label="URL Thumbnail" placeholder="https://..." />
+          <UInput v-model="form.image" label="URL Gambar Utama" placeholder="https://..." />
 
-        <div class="flex justify-end gap-2 pt-4">
-          <UButton color="gray" variant="soft" @click="router.push('/news')">Batal</UButton>
-          <UButton type="submit" color="primary">Perbarui</UButton>
-        </div>
-      </form>
+          <USelect
+            v-model="form.status"
+            label="Status"
+            :options="[
+              { label: 'Aktif', value: 1 },
+              { label: 'Nonaktif', value: 0 }
+            ]"
+          />
+
+          <div class="flex justify-end gap-2 pt-4">
+            <UButton color="gray" variant="soft" @click="router.push('/news')">
+              Batal
+            </UButton>
+            <UButton type="submit" color="primary" :loading="loading">
+              Perbarui
+            </UButton>
+          </div>
+
+          <p v-if="errorMessage" class="text-red-500 text-sm mt-2">
+            {{ errorMessage }}
+          </p>
+        </form>
+      </div>
     </UCard>
   </div>
 </template>

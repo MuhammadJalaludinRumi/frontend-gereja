@@ -1,35 +1,27 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoles } from '~/composables/useRoles'
+import { useOrganizations } from '~/composables/useOrganizations'
 
 const router = useRouter()
-const { createRole } = useRoles()
+const { create: createRole, fetchAll: fetchRoles, loading: rolesLoading, error: rolesError } = useRoles()
+const { organizations, fetchAll: fetchOrganizations, loading: orgsLoading, error: orgsError } = useOrganizations()
 
 const form = reactive({
   organization_id: null as number | null,
   name: ''
 })
 
-const organizations = ref<{ id: number; name: string }[]>([])
-const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
+// ambil data organizations saat mounted
 onMounted(async () => {
-  try {
-    const orgRes = await $fetch('http://localhost:8000/api/organizations')
-    organizations.value = Array.isArray(orgRes)
-      ? orgRes.sort((a, b) => a.name.localeCompare(b.name))
-      : []
-  } catch (err: any) {
-    console.error(err)
-    serverError.value = err.message || 'Gagal memuat data organisasi'
-  } finally {
-    loading.value = false
-  }
+  await fetchOrganizations()
 })
 
+// submit form
 const save = async () => {
   serverError.value = null
 
@@ -44,7 +36,8 @@ const save = async () => {
       organization_id: Number(form.organization_id),
       name: form.name.trim()
     })
-    await router.push('/roles')
+    await fetchRoles() // refresh list role setelah create
+    router.push('/roles')
   } catch (err: any) {
     console.error('create failed', err)
     serverError.value = err.message || 'Server error'
@@ -52,6 +45,12 @@ const save = async () => {
     saving.value = false
   }
 }
+
+// watch error dari composable
+watch([rolesError, orgsError], ([rErr, oErr]) => {
+  if (rErr) serverError.value = rErr
+  if (oErr) serverError.value = oErr
+})
 </script>
 
 <template>

@@ -104,9 +104,10 @@
 import { ref, onMounted } from 'vue'
 import { useOrganizations } from '~/composables/useOrganizations'
 
+const { organizations: orgsRef, fetchAll: fetchOrganizations, remove: deleteOrganization } = useOrganizations()
+
 const organizations = ref<any[]>([])
 const hover = ref<string | null>(null)
-const { getOrganizations, deleteOrganization } = useOrganizations()
 const isDeleteModalOpen = ref(false)
 const selectedOrgId = ref<string>('')
 
@@ -116,12 +117,20 @@ const tableHeaders = [
   'Website', 'Logo', 'Founded', 'Legal'
 ]
 
+// Ambil data organizations
 const fetchData = async () => {
-  organizations.value = await getOrganizations()
+  try {
+    await fetchOrganizations()
+    organizations.value = orgsRef.value
+  } catch (err) {
+    console.error('Gagal memuat organizations:', err)
+    organizations.value = []
+  }
 }
 
 onMounted(fetchData)
 
+// Delete modal
 const openDeleteModal = (id: string) => {
   selectedOrgId.value = id
   isDeleteModalOpen.value = true
@@ -129,16 +138,20 @@ const openDeleteModal = (id: string) => {
 
 const confirmDelete = async () => {
   if (!selectedOrgId.value) return
-  await deleteOrganization(selectedOrgId.value)
-  isDeleteModalOpen.value = false
-  await fetchData()
+  try {
+    await deleteOrganization(selectedOrgId.value)
+    isDeleteModalOpen.value = false
+    await fetchData()
+  } catch (err) {
+    console.error('Gagal menghapus organization:', err)
+  }
 }
 
+// Format tanggal
 const formatDate = (date: string) => {
   if (!date) return '-'
-  return date.split(' ')[0] // ambil bagian sebelum spasi
+  return date.split(' ')[0]
 }
-
 </script>
 
 <style scoped>

@@ -1,55 +1,142 @@
+import { ref } from 'vue'
+import { useApiUrl } from './useApiUrl'
+import { useCookie, useRuntimeConfig } from '#app'
+import { useRouter } from 'vue-router'
+
 export const useGroups = () => {
+  const apiBase = useApiUrl()
+  const groups = ref<any[]>([])
+  const group = ref<any>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
   const config = useRuntimeConfig()
-  const baseUrl = `${config.public.apiBase}/groups`
+  const isProd = config.public.sessionSecureCookie === 'true'
+  const xsrfToken = useCookie('XSRF-TOKEN').value
+  const token = useCookie('token').value
 
-  const getGroups = async () => {
-    const { data, error } = await useFetch(baseUrl)
-    return { data, error }
+  const router = useRouter()
+
+  const getHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      Accept: 'application/json'
+    }
+    if (isProd && xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
+    if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
+    return headers
   }
 
-  const getGroup = async (id: number) => {
-    const { data, error } = await useFetch(`${baseUrl}/${id}`)
-    return { data, error }
-  }
-
-  // 🔹 Create group - pakai fetch native
-  const createGroup = async (formData: FormData) => {
+  const fetchAll = async () => {
+    loading.value = true
+    error.value = null
     try {
-      const res = await fetch(baseUrl, {
+      if (!token && !xsrfToken) throw new Error('Unauthenticated')
+      const res = await $fetch('/groups', {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+      groups.value = res
+      return { data: groups.value, error: null }
+    } catch (err: any) {
+      console.error(err)
+      error.value = err.message || 'Gagal memuat data Group'
+      if (err.message === 'Unauthenticated') router.push('/login')
+      return { data: null, error: err }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const fetchById = async (id: number) => {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await $fetch(`/groups/${id}`, {
+      baseURL: apiBase,
+      headers: getHeaders(),
+      credentials: 'include'
+    })
+    group.value = res // <- langsung isi ref reactive
+    return { data: group, error: null } // <-- ini kunci fix-nya
+  } catch (err: any) {
+    console.error(err)
+    error.value = 'Gagal memuat data Group'
+    return { data: null, error: err }
+  } finally {
+    loading.value = false
+  }
+}
+
+
+  const create = async (payload: FormData) => {
+    try {
+      const res = await $fetch('/groups', {
+        baseURL: apiBase,
         method: 'POST',
-        body: formData,
+        body: payload,
+        headers: getHeaders(), // hanya Accept, Content-Type diatur otomatis
+        credentials: 'include'
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Gagal upload')
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
+      return res
+    } catch (err: any) {
+      console.error(err)
+      throw new Error(err.data?.message || 'Gagal membuat Group')
     }
   }
 
-  // 🔹 Update group
-  const updateGroup = async (id: number, payload: any) => {
-    const isFormData = payload instanceof FormData
-    if (isFormData) payload.append('_method', 'PUT')
-
+  const update = async (id: number, payload: FormData) => {
     try {
-      const res = await fetch(`${baseUrl}/${id}`, {
-        method: isFormData ? 'POST' : 'PUT',
-        body: isFormData ? payload : JSON.stringify(payload),
-        headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+      payload.append('_method', 'PUT')
+      const res = await $fetch(`/groups/${id}`, {
+        baseURL: apiBase,
+        method: 'POST',
+        body: payload,
+        headers: getHeaders(),
+        credentials: 'include'
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Gagal update')
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
+      return res
+    } catch (err: any) {
+      console.error(err)
+      throw new Error(err.data?.message || 'Gagal memperbarui Group')
     }
   }
 
-  const deleteGroup = async (id: number) => {
-    const { data, error } = await useFetch(`${baseUrl}/${id}`, { method: 'DELETE' })
-    return { data, error }
+  const remove = async (id: number) => {
+    try {
+      await $fetch(`/groups/${id}`, {
+        baseURL: apiBase,
+        method: 'DELETE',
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+    } catch (err) {
+      console.error(err)
+      throw new Error('Gagal menghapus Group')
+    }
   }
 
-  return { getGroups, getGroup, createGroup, updateGroup, deleteGroup }
+  // alias supaya component tetep jalan
+  const getGroups = fetchAll
+  const getGroup = fetchById
+  const createGroup = create
+  const updateGroup = update
+  const deleteGroup = remove
+
+  return {
+    groups,
+    group,
+    fetchAll,
+    fetchById,
+    create,
+    update,
+    remove,
+    loading,
+    error,
+    getGroups,
+    getGroup,
+    createGroup,
+    updateGroup,
+    deleteGroup
+  }
 }

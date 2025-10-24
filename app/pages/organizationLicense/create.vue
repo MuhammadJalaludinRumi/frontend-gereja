@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useOrganizationLicenses } from '~/composables/useOrganizationLicenses'
-import { useOrganizations } from '~/composables/useOrganizations'
 import { useLicenses } from '~/composables/useLicenses'
+import { useOrganizations } from '~/composables/useOrganizations'
+import { useOrganizationLicenses } from '~/composables/useOrganizationLicenses'
 
 const router = useRouter()
+const { licenses, fetchAll: fetchLicenses } = useLicenses()
+const { organizations, fetchAll: fetchOrganizations } = useOrganizations()
 const { create } = useOrganizationLicenses()
-const { getOrganizations } = useOrganizations()
-const { getLicenses } = useLicenses()
 
+// Form reactive
 const form = reactive({
   organization_id: null as number | null,
   license_id: null as number | null,
@@ -18,41 +19,39 @@ const form = reactive({
   expiry: '',
 })
 
-const organizations = ref<{ id: number; name: string }[]>([])
-const licenses = ref<{ id: number; name: string }[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
-const selectedOrg = computed(() =>
-  organizations.value.find(o => o.id === form.organization_id)
-)
+// Computed for selected names
 const selectedLicense = computed(() =>
   licenses.value.find(l => l.id === form.license_id)
 )
+const selectedOrganization = computed(() =>
+  organizations.value.find(o => o.id === form.organization_id)
+)
 
-onMounted(async () => {
+// Fetch data licenses + organizations
+const fetchData = async () => {
+  loading.value = true
   try {
-    const orgRes = await getOrganizations()
-    const licRes = await getLicenses()
-    organizations.value = orgRes.sort((a, b) => a.name.localeCompare(b.name))
-    licenses.value = licRes.sort((a, b) => a.name.localeCompare(b.name))
+    await Promise.all([fetchLicenses(), fetchOrganizations()])
   } catch (err: any) {
     console.error(err)
-    serverError.value = 'Gagal memuat data dropdown'
+    serverError.value = 'Gagal memuat data licenses atau organizations'
   } finally {
     loading.value = false
   }
-})
+}
 
+onMounted(fetchData)
+
+// Submit form
 const submit = async () => {
   serverError.value = null
-  if (!form.organization_id) {
-    serverError.value = 'Organization wajib dipilih.'
-    return
-  }
-  if (!form.license_id) {
-    serverError.value = 'License wajib dipilih.'
+
+  if (!form.organization_id || !form.license_id) {
+    serverError.value = 'Organization & License wajib dipilih.'
     return
   }
 
@@ -86,34 +85,33 @@ const submit = async () => {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="mb-4 text-sm text-gray-400">Loading...</div>
+    <div v-if="loading" class="mb-4 text-sm text-gray-400">Loading data...</div>
 
     <!-- Form -->
     <UCard v-else :ui="{ body: { padding: 'p-6' } }">
       <form @submit.prevent="submit" class="space-y-6">
-        <!-- Organization & License -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">Organization</label>
-            <select v-model.number="form.organization_id"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);">
-              <option value="" disabled>Pilih Organization</option>
-              <option v-for="org in organizations" :key="org.id" :value="org.id">{{ org.name }}</option>
-            </select>
-            <UBadge v-if="selectedOrg" color="primary" variant="soft" class="mt-2">{{ selectedOrg.name }}</UBadge>
-          </div>
+        <!-- Organization -->
+        <div>
+          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">Organization</label>
+          <select v-model.number="form.organization_id"
+            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);">
+            <option value="" disabled>Pilih Organization</option>
+            <option v-for="o in organizations" :key="o.id" :value="o.id">{{ o.name }}</option>
+          </select>
+          <UBadge v-if="selectedOrganization" color="blue" variant="soft" class="mt-2">{{ selectedOrganization.name }}</UBadge>
+        </div>
 
-          <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">License</label>
-            <select v-model.number="form.license_id"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);">
-              <option value="" disabled>Pilih License</option>
-              <option v-for="l in licenses" :key="l.id" :value="l.id">{{ l.name }}</option>
-            </select>
-            <UBadge v-if="selectedLicense" color="blue" variant="soft" class="mt-2">{{ selectedLicense.name }}</UBadge>
-          </div>
+        <!-- License -->
+        <div>
+          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">License</label>
+          <select v-model.number="form.license_id"
+            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);">
+            <option value="" disabled>Pilih License</option>
+            <option v-for="l in licenses" :key="l.id" :value="l.id">{{ l.name }}</option>
+          </select>
+          <UBadge v-if="selectedLicense" color="blue" variant="soft" class="mt-2">{{ selectedLicense.name }}</UBadge>
         </div>
 
         <!-- Max Member & Active -->
@@ -157,7 +155,7 @@ const submit = async () => {
     <!-- Info Card -->
     <UCard class="mt-6" :ui="{ body: { padding: 'p-4' } }">
       <p class="text-sm" style="color: var(--ui-text-dimmed);">
-        <strong>Note:</strong> Pastikan memilih organisasi & license yang benar, dan atur tanggal kedaluwarsa dengan tepat.
+        <strong>Note:</strong> Pastikan memilih organization & license yang benar, dan atur tanggal kedaluwarsa dengan tepat.
       </p>
     </UCard>
   </div>

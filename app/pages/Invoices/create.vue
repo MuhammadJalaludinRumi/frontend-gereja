@@ -2,9 +2,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useInvoices } from '~/composables/useInvoices'
 import { useRouter } from '#app'
+import { useApiUrl } from '~/composables/useApiUrl'
+import { useCookie } from '#app'
 
 const router = useRouter()
-const { createInvoice } = useInvoices()
+const apiBase = useApiUrl()
+const { create, loading } = useInvoices()
 
 const form = ref({
   organization_id: null as number | null,
@@ -14,35 +17,62 @@ const form = ref({
   total: 0
 })
 
-const organizations = ref([])
-const loading = ref(true)
+const organizations = ref<any[]>([])
+const orgLoading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
-const selectedOrganization = computed(() => {
-  return organizations.value.find((org: any) => org.id === Number(form.value.organization_id))
-})
+// 🔹 Ambil token / csrf header dari cookie (sama kaya useInvoices)
+const getHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  }
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('id-ID', {
+  const xsrfToken = useCookie('XSRF-TOKEN')
+  const token = useCookie('token')
+
+  // prod pake XSRF, local pake bearer
+  const isProd = process.env.NODE_ENV === 'production'
+
+  if (isProd && xsrfToken.value) {
+    headers['X-XSRF-TOKEN'] = xsrfToken.value
+  } else if (!isProd && token.value) {
+    headers['Authorization'] = `Bearer ${token.value}`
+  }
+
+  return headers
+}
+
+const selectedOrganization = computed(() =>
+  organizations.value.find((org: any) => org.id === Number(form.value.organization_id))
+)
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0
   }).format(value)
-}
 
+// 🔹 Load daftar organisasi (dengan header auth yang sama)
 onMounted(async () => {
   try {
-    const orgsRes = await $fetch('http://localhost:8000/api/organizations')
-    organizations.value = orgsRes || []
-  } catch (err: any) {
+    const res = await $fetch('/organizations', {
+      baseURL: apiBase,
+      credentials: 'include',
+      headers: getHeaders()
+    })
+    organizations.value = res || []
+  } catch (err) {
     console.error(err)
-    serverError.value = 'Gagal memuat data organizations'
+    serverError.value = 'Gagal memuat data organizations (401 Unauthorized)'
   } finally {
-    loading.value = false
+    orgLoading.value = false
   }
 })
 
+// 🔹 Submit form
 const submit = async () => {
   serverError.value = null
 
@@ -50,16 +80,14 @@ const submit = async () => {
     serverError.value = 'Organization wajib dipilih'
     return
   }
-
   if (!form.value.date) {
     serverError.value = 'Tanggal invoice wajib diisi'
     return
   }
 
   saving.value = true
-
   try {
-    await createInvoice(form.value)
+    await create(form.value)
     router.push('/invoices')
   } catch (err: any) {
     console.error('Submit error:', err)
@@ -72,172 +100,70 @@ const submit = async () => {
 
 <template>
   <div class="p-6 w-full overflow-hidden" style="background: var(--ui-bg); color: var(--ui-text);">
-    <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">
-        Tambah Invoice
-      </h1>
-      <UButton
-        to="/invoices"
-        icon="i-heroicons-arrow-left"
-        color="gray"
-        variant="soft"
-        label="Back"
-      />
+      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Tambah Invoice</h1>
+      <UButton to="/invoices" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Back" />
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="mb-4 text-sm text-gray-400">Loading...</div>
+    <div v-if="orgLoading" class="text-gray-400 mb-4">Loading...</div>
 
-    <!-- Form Card -->
     <UCard v-else :ui="{ body: { padding: 'p-6' } }">
       <form @submit.prevent="submit" class="space-y-6">
         <!-- Organization -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            Organization <span class="text-red-500">*</span>
-          </label>
+          <label class="block mb-2 text-sm font-semibold">Organization <span class="text-red-500">*</span></label>
           <select
             v-model.number="form.organization_id"
-            required
-            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
+            class="w-full px-3 py-2 text-sm rounded-lg"
             style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
           >
             <option :value="null" disabled>Pilih Organization</option>
-            <option
-              v-for="org in organizations"
-              :key="org.id"
-              :value="org.id"
-            >
-              {{ org.name }}
-            </option>
+            <option v-for="org in organizations" :key="org.id" :value="org.id">{{ org.name }}</option>
           </select>
-          <UBadge v-if="selectedOrganization" color="blue" variant="soft" class="mt-2">
-            {{ selectedOrganization.name }}
-          </UBadge>
+          <UBadge v-if="selectedOrganization" color="blue" variant="soft" class="mt-2">{{ selectedOrganization.name }}</UBadge>
         </div>
 
         <!-- Date -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            Invoice Date <span class="text-red-500">*</span>
-          </label>
+          <label class="block mb-2 text-sm font-semibold">Invoice Date <span class="text-red-500">*</span></label>
           <input
             v-model="form.date"
             type="date"
-            required
-            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
+            class="w-full px-3 py-2 text-sm rounded-lg"
             style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
           />
         </div>
 
-        <!-- Current Expiry & New Expiry Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Expiries -->
+        <div class="grid md:grid-cols-2 gap-4">
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Current Expiry
-            </label>
-            <input
-              v-model="form.current_expiry"
-              type="datetime-local"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
-            />
+            <label class="block mb-2 text-sm font-semibold">Current Expiry</label>
+            <input v-model="form.current_expiry" type="datetime-local" class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);" />
           </div>
-
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              New Expiry
-            </label>
-            <input
-              v-model="form.new_expiry"
-              type="datetime-local"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
-            />
+            <label class="block mb-2 text-sm font-semibold">New Expiry</label>
+            <input v-model="form.new_expiry" type="datetime-local" class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);" />
           </div>
         </div>
 
         <!-- Total -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            Total
-          </label>
-          <input
-            v-model.number="form.total"
-            type="number"
-            step="1"
-            placeholder="0"
-            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
-          />
-          <p v-if="form.total > 0" class="text-xs mt-2" style="color: var(--ui-text-dimmed);">
-            Preview: {{ formatCurrency(form.total) }}
-          </p>
+          <label class="block mb-2 text-sm font-semibold">Total</label>
+          <input v-model.number="form.total" type="number" class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border);" />
+          <p v-if="form.total > 0" class="text-xs mt-2">Preview: {{ formatCurrency(form.total) }}</p>
         </div>
 
-        <!-- Error Alert -->
-        <div
-          v-if="serverError"
-          class="px-4 py-3 rounded-lg text-sm"
-          style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;"
-        >
-          {{ serverError }}
-        </div>
+        <div v-if="serverError" class="p-3 rounded bg-red-100 text-red-500 border border-red-300">{{ serverError }}</div>
 
-        <!-- Action Buttons -->
-        <div class="flex items-center gap-3 pt-2">
-          <UButton
-            type="submit"
-            :loading="saving"
-            :disabled="saving"
-            color="primary"
-            icon="i-heroicons-check-circle"
-            :label="saving ? 'Saving...' : 'Save Invoice'"
-          />
-          <UButton
-            color="gray"
-            variant="soft"
-            icon="i-heroicons-x-mark"
-            label="Cancel"
-            @click="router.push('/invoices')"
-          />
+        <div class="flex gap-3 pt-2">
+          <UButton type="submit" :loading="saving" color="primary" icon="i-heroicons-check-circle"
+            :label="saving ? 'Saving...' : 'Save Invoice'" />
+          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Cancel" @click="router.push('/invoices')" />
         </div>
       </form>
     </UCard>
-
-    <!-- Info Card -->
-    <UCard class="mt-6" :ui="{ body: { padding: 'p-4' } }">
-      <div class="flex items-start gap-3">
-        <span class="text-blue-400 text-lg">ℹ️</span>
-        <div class="text-sm" style="color: var(--ui-text-dimmed);">
-          <p class="font-semibold mb-1" style="color: var(--ui-text);">Note:</p>
-          <p>Field yang ditandai dengan <span class="text-red-500">*</span> wajib diisi. Current expiry dan new expiry menggunakan format datetime untuk pencatatan yang lebih akurat.</p>
-        </div>
-      </div>
-    </UCard>
-
-    <!-- Summary Card -->
-    <UCard v-if="selectedOrganization" class="mt-4" :ui="{ body: { padding: 'p-4' } }">
-      <div class="flex items-start gap-3">
-        <span class="text-2xl">📄</span>
-        <div class="text-sm">
-          <p class="font-semibold mb-2" style="color: var(--ui-text-highlighted);">Invoice Summary</p>
-          <div class="space-y-1" style="color: var(--ui-text-dimmed);">
-            <p>Organization: <span class="font-medium" style="color: var(--ui-text);">{{ selectedOrganization.name }}</span></p>
-            <p v-if="form.date">Date: <span class="font-medium" style="color: var(--ui-text);">{{ form.date }}</span></p>
-            <p v-if="form.total > 0">Total: <span class="font-medium" style="color: var(--ui-text);">{{ formatCurrency(form.total) }}</span></p>
-          </div>
-        </div>
-      </div>
-    </UCard>
   </div>
 </template>
-
-<style scoped>
-input:focus,
-select:focus {
-  outline: none;
-  border-color: var(--ui-primary);
-}
-</style>

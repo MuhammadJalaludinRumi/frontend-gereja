@@ -1,18 +1,19 @@
+// composables/useCities.ts
 import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
-export const useLicenses = () => {
+export const useCities = () => {
   const apiBase = useApiUrl()
-  const licenses = ref<any[]>([])
-  const license = ref<any>(null)
+  const cities = ref<any[]>([])
+  const city = ref<any>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   const config = useRuntimeConfig()
   const isProd = config.public.sessionSecureCookie === 'true'
 
-  // 🔑 ambil token dan xsrf
+  // Ambil token dan csrf (sama seperti useAcls)
   const xsrfToken = useCookie('XSRF-TOKEN').value
   const token = useCookie('token').value
 
@@ -33,48 +34,45 @@ export const useLicenses = () => {
     return headers
   }
 
-  // 🔹 Ambil semua licenses
   const fetchAll = async () => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch('/licenses', {
+      const res = await $fetch('/city', {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
       })
-      licenses.value = res
+      cities.value = res
     } catch (err) {
-      error.value = 'Gagal memuat data licenses'
-      console.error('❌ FetchAll Licenses error:', err)
+      error.value = 'Gagal memuat data City'
+      console.error(err)
     } finally {
       loading.value = false
     }
   }
 
-  // 🔹 Ambil license by ID
   const fetchById = async (id: number) => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch(`/licenses/${id}`, {
+      const res = await $fetch(`/city/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
       })
-      license.value = res
+      city.value = res
     } catch (err) {
-      error.value = 'Gagal memuat data license'
-      console.error('❌ FetchById License error:', err)
+      error.value = 'Gagal memuat data City'
+      console.error(err)
     } finally {
       loading.value = false
     }
   }
 
-  // 🔹 Create license
-  const create = async (payload: any) => {
+  const create = async (payload: { name: string, province: string }) => {
     try {
-      const res = await $fetch('/licenses', {
+      const res = await $fetch('/city', {
         baseURL: apiBase,
         method: 'POST',
         headers: getHeaders(),
@@ -83,15 +81,14 @@ export const useLicenses = () => {
       })
       return res
     } catch (err) {
-      console.error('❌ Create License error:', err)
-      throw new Error('Gagal membuat license')
+      console.error(err)
+      throw new Error('Gagal membuat City')
     }
   }
 
-  // 🔹 Update license
   const update = async (id: number, payload: any) => {
     try {
-      const res = await $fetch(`/licenses/${id}`, {
+      const res = await $fetch(`/city/${id}`, {
         baseURL: apiBase,
         method: 'PUT',
         headers: getHeaders(),
@@ -100,35 +97,24 @@ export const useLicenses = () => {
       })
       return res
     } catch (err) {
-      console.error('❌ Update License error:', err)
-      throw new Error('Gagal memperbarui license')
+      console.error(err)
+      throw new Error('Gagal memperbarui City')
     }
   }
 
-  // 🔹 Hapus license
   const remove = async (id: number) => {
     try {
-      await $fetch(`/licenses/${id}`, {
+      await $fetch(`/city/${id}`, {
         baseURL: apiBase,
         method: 'DELETE',
         headers: getHeaders(),
         credentials: 'include'
       })
     } catch (err) {
-      console.error('❌ Delete License error:', err)
-      throw new Error('Gagal menghapus license')
+      console.error(err)
+      throw new Error('Gagal menghapus City')
     }
   }
 
-  return {
-    licenses,
-    license,
-    fetchAll,
-    fetchById,
-    create,
-    update,
-    remove,
-    loading,
-    error
-  }
+  return { cities, city, fetchAll, fetchById, create, update, remove, loading, error }
 }
