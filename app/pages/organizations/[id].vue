@@ -1,89 +1,84 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useGroups } from '~/composables/useGroups'
+import { useOrganizations } from '~/composables/useOrganizations'
 import { useCities } from '~/composables/useCity'
 
 const route = useRoute()
 const router = useRouter()
-
-const { fetchById, update } = useGroups()
+const { organization, fetchById, update, loading, error } = useOrganizations()
 const { cities, fetchAll: fetchCities } = useCities()
 
-const form = reactive({
+const saving = ref(false)
+const serverError = ref('')
+const logoPreview = ref<string | null>(null)
+const currentLogo = ref<string | null>(null)
+
+// form data reactive
+const form = ref({
   name: '',
   address: '',
-  city_id: '',
+  city: '',
   phone: '',
   email: '',
   website: '',
+  logo: null as File | null,
   founded: '',
   legal: ''
 })
 
-const loading = ref(true)
-const saving = ref(false)
-const serverError = ref<string | null>(null)
-const currentLogo = ref<string | null>(null)
-const logoFile = ref<File | null>(null)
-const logoPreview = ref<string | null>(null)
-
-// Handle logo change
-const onFileChange = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0] || null
-  logoFile.value = file
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => (logoPreview.value = e.target?.result as string)
-    reader.readAsDataURL(file)
-  } else {
-    logoPreview.value = null
-  }
-}
-
-// Fetch data group dan isi otomatis ke form
+// ambil data saat mount
 onMounted(async () => {
-  loading.value = true
-  try {
-    await fetchCities()
+  await fetchCities()
+  const id = route.params.id
+  await fetchById(id)
 
-    const { data, error } = await fetchById(Number(route.params.id))
-    if (error) throw error
+  if (organization.value) {
+    // isi data form
+    Object.assign(form.value, {
+      name: organization.value.name || '',
+      address: organization.value.address || '',
+      city: organization.value.city || '',
+      phone: organization.value.phone || '',
+      email: organization.value.email || '',
+      website: organization.value.website || '',
+      founded: organization.value.founded || '',
+      legal: organization.value.legal || ''
+    })
 
-    if (data) {
-      form.name = data.name || ''
-      form.address = data.address || ''
-      form.city_id = data.city_id || ''
-      form.phone = data.phone || ''
-      form.email = data.email || ''
-      form.website = data.website || ''
-      form.founded = data.founded ? data.founded.split('T')[0] : ''
-      form.legal = data.legal || ''
-      currentLogo.value = data.logo || null
+    if (organization.value.logo) {
+      currentLogo.value = organization.value.logo
     }
-  } catch (err: any) {
-    console.error('Error loading group:', err)
-    serverError.value = 'Gagal memuat data group'
-  } finally {
-    loading.value = false
+  } else {
+    serverError.value = 'Data organisasi tidak ditemukan'
   }
 })
 
-// Submit form
-const submit = async () => {
-  serverError.value = null
-  saving.value = true
-  try {
-    const fd = new FormData()
-    Object.entries(form).forEach(([key, val]) => fd.append(key, val || ''))
-    if (logoFile.value) fd.append('logo', logoFile.value)
-    fd.append('_method', 'PUT')
+// handle file change
+const onFileChange = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) {
+    form.value.logo = file
+    logoPreview.value = URL.createObjectURL(file)
+  }
+}
 
-    await update(Number(route.params.id), fd)
-    router.push('/groups')
+// submit update
+const submit = async () => {
+  try {
+    saving.value = true
+    serverError.value = ''
+
+    const formData = new FormData()
+    Object.entries(form.value).forEach(([key, value]) => {
+      if (value !== null && value !== '') formData.append(key, value as any)
+    })
+
+    await update(route.params.id as string, formData)
+    router.push('/organizations')
   } catch (err: any) {
-    console.error('Update error:', err)
-    serverError.value = err.message || 'Gagal update data'
+    console.error('Submit error:', err)
+    serverError.value = err.message || 'Gagal memperbarui data'
   } finally {
     saving.value = false
   }
@@ -94,20 +89,19 @@ const submit = async () => {
   <div class="p-6 w-full overflow-hidden" style="background: var(--ui-bg); color: var(--ui-text);">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">
-        Edit Group
+        Edit Organization
       </h1>
-      <UButton to="/groups" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Back" />
+      <UButton to="/organizations" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Back" />
     </div>
 
     <div v-if="loading" class="mb-4 text-sm text-gray-400">Loading...</div>
 
     <UCard v-else :ui="{ body: { padding: 'p-6' } }">
       <form @submit.prevent="submit" class="space-y-6">
-
         <!-- Name -->
         <div>
           <label class="block mb-2 text-sm font-semibold">Name <span class="text-red-500">*</span></label>
-          <input v-model="form.name" type="text" required placeholder="Masukkan nama group"
+          <input v-model="form.name" type="text" required placeholder="Masukkan nama organisasi"
             class="w-full px-3 py-2 text-sm rounded-lg border"
             style="background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text);" />
         </div>
@@ -123,7 +117,7 @@ const submit = async () => {
         <!-- City -->
         <div>
           <label class="block mb-2 text-sm font-semibold">City</label>
-          <select v-model="form.city_id"
+          <select v-model="form.city"
             class="w-full px-3 py-2 text-sm rounded-lg border"
             style="background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text);">
             <option value="" disabled>Pilih Kota</option>
@@ -158,13 +152,16 @@ const submit = async () => {
         <!-- Logo -->
         <div>
           <label class="block mb-2 text-sm font-semibold">Logo</label>
+
           <div v-if="currentLogo && !logoPreview" class="mb-3">
             <p class="text-xs mb-2 text-gray-400">Current logo:</p>
             <img :src="currentLogo" alt="Current Logo" class="h-20 w-auto rounded border" />
           </div>
+
           <input type="file" accept="image/*" @change="onFileChange"
             class="w-full px-3 py-2 text-sm rounded-lg border"
             style="background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text);" />
+
           <div v-if="logoPreview" class="mt-3">
             <p class="text-xs mb-2 text-gray-400">New logo preview:</p>
             <img :src="logoPreview" alt="Preview" class="h-20 w-auto rounded border" />
@@ -180,6 +177,7 @@ const submit = async () => {
               style="background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text);" />
             <p class="mt-1 text-xs text-gray-400 italic">Tanggal tidak bisa diubah</p>
           </div>
+
           <div>
             <label class="block mb-2 text-sm font-semibold">Legal</label>
             <input v-model="form.legal" type="text" placeholder="Legal entity"
@@ -194,8 +192,9 @@ const submit = async () => {
 
         <div class="flex gap-3 pt-2">
           <UButton type="submit" :loading="saving" :disabled="saving" color="primary"
-            icon="i-heroicons-check-circle" :label="saving ? 'Updating...' : 'Update Group'" />
-          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Cancel" @click="router.push('/groups')" />
+            icon="i-heroicons-check-circle" :label="saving ? 'Updating...' : 'Update Organization'" />
+          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Cancel"
+            @click="router.push('/organizations')" />
         </div>
       </form>
     </UCard>

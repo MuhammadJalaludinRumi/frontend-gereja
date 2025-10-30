@@ -1,55 +1,44 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useOrganizations } from '~/composables/useOrganizations'
-import { useCookie, useRuntimeConfig } from '#app'
+import { ref, reactive, computed, onMounted } from "vue"
+import { useRouter } from "vue-router"
+import { useOrganizations } from "../../composables/useOrganizations"
+import { useCities } from "../../composables/useCity"
+import { useGroups } from "../../composables/useGroups"
 
-const { create } = useOrganizations() // ✅ pake nama yang sama di composable
 const router = useRouter()
+const { create } = useOrganizations()
+const { cities, fetchAll: fetchCities } = useCities()
+const { groups, fetchAll: fetchGroups } = useGroups()
 
-// Auth / ACL headers
-const config = useRuntimeConfig()
-const isProd = config.public.sessionSecureCookie === 'true'
-const xsrfToken = useCookie('XSRF-TOKEN').value
-const token = useCookie('token').value
-
-const getHeaders = (isFormData = false) => {
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (!isFormData) headers['Content-Type'] = 'application/json'
-  if (xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
-  if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
-
-// Form reactive
-const form = reactive({
-  name: '',
-  abbreviation: '',
-  address: '',
-  city: '',
-  latitude: null as number | null,
-  longitude: null as number | null,
-  phone: '',
-  email: '',
-  group_id: '',
-  website: '',
-  logo: '',
-  founded: '',
-  legal: '',
-})
-
-const cities = ref<any[]>([])
-const groups = ref<any[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
-const selectedCity = computed(() => cities.value.find(c => c.id === Number(form.city)))
-const selectedGroup = computed(() => groups.value.find(g => g.id === Number(form.group_id)))
+const form = reactive({
+  name: "",
+  abbreviation: "",
+  address: "",
+  city: "" as string | number, // backend mungkin expect string
+  latitude: "" as string | number,
+  longitude: "" as string | number,
+  phone: "",
+  email: "",
+  group_id: "" as string | number, // backend mungkin expect string
+  website: "",
+  founded: "",
+  legal: "",
+})
 
-// Logo handling
+const selectedCity = computed(() =>
+  cities.value.find((c: any) => c.id == form.city) // == untuk compare string dan number
+)
+const selectedGroup = computed(() =>
+  groups.value.find((g: any) => g.id == form.group_id)
+)
+
 const logoFile = ref<File | null>(null)
 const logoPreview = ref<string | null>(null)
+
 const onFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0] || null
   logoFile.value = file
@@ -60,42 +49,59 @@ const onFileChange = (e: Event) => {
   } else logoPreview.value = null
 }
 
-// Fetch cities & groups with ACL headers
 onMounted(async () => {
   try {
-    const [citiesRes, groupsRes] = await Promise.all([
-      $fetch('/city', { baseURL: 'http://localhost:8000/api', headers: getHeaders(), credentials: 'include' }),
-      $fetch('/groups', { baseURL: 'http://localhost:8000/api', headers: getHeaders(), credentials: 'include' }),
-    ])
-    cities.value = citiesRes || []
-    groups.value = groupsRes || []
+    await Promise.all([fetchCities(), fetchGroups()])
   } catch (err) {
     console.error(err)
-    serverError.value = 'Gagal memuat data cities atau groups'
+    serverError.value = "Gagal memuat data kota atau yayasan."
   } finally {
     loading.value = false
   }
 })
 
-// Save form
 const save = async () => {
   serverError.value = null
   if (!form.name) {
-    serverError.value = 'Nama organization wajib diisi'
+    serverError.value = "Nama organisasi wajib diisi."
     return
   }
 
   saving.value = true
   try {
     const fd = new FormData()
-    Object.entries(form).forEach(([key, val]) => fd.append(key, val ?? ''))
-    if (logoFile.value) fd.append('logo', logoFile.value)
 
-    await create(fd) // ✅ pake composable create
-    router.push('/organizations')
+    // Append semua field (backend akan validasi mana yang required)
+    Object.entries(form).forEach(([key, val]) => {
+      // Skip jika value kosong string atau null
+      if (val !== null && val !== "") {
+        fd.append(key, String(val))
+      }
+    })
+
+    if (logoFile.value) {
+      fd.append('logo', logoFile.value)
+    }
+
+    // 🔍 DEBUG: Lihat apa yang dikirim
+    console.log('=== FORM DATA DEBUG ===')
+    for (let [key, value] of fd.entries()) {
+      console.log(`${key}:`, value)
+    }
+    console.log('======================')
+
+    await create(fd)
+    router.push("/organizations")
   } catch (err: any) {
-    console.error('Submit error:', err)
-    serverError.value = err.message || 'Gagal menyimpan data'
+    console.error("Submit error:", err)
+
+    // Tampilkan detail error dari backend jika ada
+    if (err?.data) {
+      console.error('Backend error detail:', err.data)
+      serverError.value = JSON.stringify(err.data, null, 2)
+    } else {
+      serverError.value = err.message || "Gagal menyimpan data organisasi."
+    }
   } finally {
     saving.value = false
   }
@@ -103,60 +109,78 @@ const save = async () => {
 </script>
 
 <template>
-  <div class="p-6 w-full overflow-hidden" style="background: var(--ui-bg); color: var(--ui-text);">
-    <!-- Header -->
+  <div
+    class="p-6 w-full overflow-hidden"
+    style="background: var(--ui-bg); color: var(--ui-text);"
+  >
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">
+      <h1
+        class="text-2xl font-bold"
+        style="color: var(--ui-text-highlighted);"
+      >
         Buat Organization Baru
       </h1>
-      <UButton to="/organizations" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Back" />
+      <UButton
+        to="/organizations"
+        icon="i-heroicons-arrow-left"
+        color="gray"
+        variant="soft"
+        label="Back"
+      />
     </div>
 
-    <!-- Loading -->
     <div v-if="loading" class="mb-4 text-sm text-gray-400">Loading...</div>
 
-    <!-- Form Card -->
     <UCard v-else :ui="{ body: { padding: 'p-6' } }">
       <form @submit.prevent="save" class="space-y-6">
-        <!-- Name & Abbreviation Grid -->
+        <!-- Name & Abbreviation -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
+            <label class="block mb-2 text-sm font-semibold">
               Name <span class="text-red-500">*</span>
             </label>
-            <input v-model="form.name" type="text" required placeholder="Masukkan nama organization"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <input
+              v-model="form.name"
+              type="text"
+              required
+              placeholder="Masukkan nama organization"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
-
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Abbreviation
-            </label>
-            <input v-model="form.abbreviation" type="text" placeholder="Singkatan"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <label class="block mb-2 text-sm font-semibold">Abbreviation</label>
+            <input
+              v-model="form.abbreviation"
+              type="text"
+              placeholder="Singkatan"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
         </div>
 
         <!-- Address -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            Address
-          </label>
-          <textarea v-model="form.address" placeholder="Masukkan alamat" rows="3"
-            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"></textarea>
+          <label class="block mb-2 text-sm font-semibold">Address</label>
+          <textarea
+            v-model="form.address"
+            placeholder="Masukkan alamat"
+            rows="3"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+          ></textarea>
         </div>
 
         <!-- City -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            City
-          </label>
-          <select v-model="form.city" class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);">
-            <option value="" disabled>Pilih Kota</option>
+          <label class="block mb-2 text-sm font-semibold">City</label>
+          <select
+            v-model="form.city"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+          >
+            <option value="">Pilih Kota</option>
             <option v-for="city in cities" :key="city.id" :value="city.id">
               {{ city.name }}
             </option>
@@ -166,56 +190,63 @@ const save = async () => {
           </UBadge>
         </div>
 
-        <!-- Latitude & Longitude Grid -->
+        <!-- Lat & Long -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Latitude
-            </label>
-            <input v-model.number="form.latitude" type="number" step="any" placeholder="-6.200000"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <label class="block mb-2 text-sm font-semibold">Latitude</label>
+            <input
+              v-model="form.latitude"
+              type="text"
+              placeholder="-6.200000"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
-
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Longitude
-            </label>
-            <input v-model.number="form.longitude" type="number" step="any" placeholder="106.816666"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <label class="block mb-2 text-sm font-semibold">Longitude</label>
+            <input
+              v-model="form.longitude"
+              type="text"
+              placeholder="106.816666"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
         </div>
 
-        <!-- Phone & Email Grid -->
+        <!-- Phone & Email -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Phone
-            </label>
-            <input v-model="form.phone" type="tel" placeholder="08123456789"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <label class="block mb-2 text-sm font-semibold">Phone</label>
+            <input
+              v-model="form.phone"
+              type="tel"
+              placeholder="08123456789"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
-
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Email
-            </label>
-            <input v-model="form.email" type="email" placeholder="email@example.com"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <label class="block mb-2 text-sm font-semibold">Email</label>
+            <input
+              v-model="form.email"
+              type="email"
+              placeholder="email@example.com"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
         </div>
 
-        <!-- Group (Yayasan) -->
+        <!-- Group -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            Yayasan
-          </label>
-          <select v-model="form.group_id" class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);">
-            <option value="" disabled>Pilih Yayasan</option>
+          <label class="block mb-2 text-sm font-semibold">Yayasan</label>
+          <select
+            v-model="form.group_id"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+          >
+            <option value="">Pilih Yayasan</option>
             <option v-for="group in groups" :key="group.id" :value="group.id">
               {{ group.name }}
             </option>
@@ -227,73 +258,96 @@ const save = async () => {
 
         <!-- Website -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            Website
-          </label>
-          <input v-model="form.website" type="text" placeholder="https://example.com"
-            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+          <label class="block mb-2 text-sm font-semibold">Website</label>
+          <input
+            v-model="form.website"
+            type="text"
+            placeholder="https://example.com"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+          />
         </div>
 
-        <!-- Logo Upload -->
+        <!-- Logo -->
         <div>
-          <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-            Logo
-          </label>
-          <input type="file" accept="image/*" @change="onFileChange"
-            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
-          <!-- Preview -->
+          <label class="block mb-2 text-sm font-semibold">Logo</label>
+          <input
+            type="file"
+            accept="image/*"
+            @change="onFileChange"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+          />
           <div v-if="logoPreview" class="mt-3">
-            <img :src="logoPreview" alt="Logo Preview" class="h-20 w-auto rounded border"
-              style="border-color: var(--ui-border);" />
+            <img
+              :src="logoPreview"
+              alt="Logo Preview"
+              class="h-20 w-auto rounded border"
+              style="border-color: var(--ui-border);"
+            />
           </div>
         </div>
 
-        <!-- Founded & Legal Grid -->
+        <!-- Founded & Legal -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Founded Date
-            </label>
-            <input v-model="form.founded" type="date"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <label class="block mb-2 text-sm font-semibold">Founded Date</label>
+            <input
+              v-model="form.founded"
+              type="date"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
-
           <div>
-            <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
-              Legal
-            </label>
-            <input v-model="form.legal" type="text" placeholder="Legal entity"
-              class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);" />
+            <label class="block mb-2 text-sm font-semibold">Legal</label>
+            <input
+              v-model="form.legal"
+              type="text"
+              placeholder="Legal entity"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
         </div>
 
-        <!-- Error Alert -->
-        <div v-if="serverError" class="px-4 py-3 rounded-lg text-sm"
-          style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;">
+        <div
+          v-if="serverError"
+          class="px-4 py-3 rounded-lg text-sm whitespace-pre-wrap"
+          style="background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; max-height: 300px; overflow-y: auto;"
+        >
           {{ serverError }}
         </div>
 
-        <!-- Action Buttons -->
         <div class="flex items-center gap-3 pt-2">
-          <UButton type="submit" :loading="saving" :disabled="saving" color="primary" icon="i-heroicons-check-circle"
-            :label="saving ? 'Saving...' : 'Save Organization'" />
-          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Cancel"
-            @click="router.push('/organizations')" />
+          <UButton
+            type="submit"
+            :loading="saving"
+            :disabled="saving"
+            color="primary"
+            icon="i-heroicons-check-circle"
+            :label="saving ? 'Saving...' : 'Save Organization'"
+          />
+          <UButton
+            color="gray"
+            variant="soft"
+            icon="i-heroicons-x-mark"
+            label="Cancel"
+            @click="router.push('/organizations')"
+          />
         </div>
       </form>
     </UCard>
 
-    <!-- Info Card -->
     <UCard class="mt-6" :ui="{ body: { padding: 'p-4' } }">
       <div class="flex items-start gap-3">
         <span class="text-blue-400 text-lg">ℹ️</span>
-        <div class="text-sm" style="color: var(--ui-text-dimmed);">
-          <p class="font-semibold mb-1" style="color: var(--ui-text);">Note:</p>
-          <p>Field yang ditandai dengan <span class="text-red-500">*</span> wajib diisi. Logo akan di-upload otomatis saat form disimpan.</p>
+        <div class="text-sm">
+          <p class="font-semibold mb-1">Debug Mode Active:</p>
+          <p>
+            Check browser console untuk melihat payload yang dikirim ke backend.
+            Field dengan <span class="text-red-500">*</span> wajib diisi.
+          </p>
         </div>
       </div>
     </UCard>

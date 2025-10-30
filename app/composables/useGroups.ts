@@ -9,12 +9,10 @@ export const useGroups = () => {
   const group = ref<any>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
-
   const config = useRuntimeConfig()
   const isProd = config.public.sessionSecureCookie === 'true'
   const xsrfToken = useCookie('XSRF-TOKEN').value
   const token = useCookie('token').value
-
   const router = useRouter()
 
   const getHeaders = (): Record<string, string> => {
@@ -36,7 +34,7 @@ export const useGroups = () => {
         headers: getHeaders(),
         credentials: 'include'
       })
-      groups.value = res
+      groups.value = res as any[]
       return { data: groups.value, error: null }
     } catch (err: any) {
       console.error(err)
@@ -49,25 +47,24 @@ export const useGroups = () => {
   }
 
   const fetchById = async (id: number) => {
-  loading.value = true
-  error.value = null
-  try {
-    const res = await $fetch(`/groups/${id}`, {
-      baseURL: apiBase,
-      headers: getHeaders(),
-      credentials: 'include'
-    })
-    group.value = res // <- langsung isi ref reactive
-    return { data: group, error: null } // <-- ini kunci fix-nya
-  } catch (err: any) {
-    console.error(err)
-    error.value = 'Gagal memuat data Group'
-    return { data: null, error: err }
-  } finally {
-    loading.value = false
+    loading.value = true
+    error.value = null
+    try {
+      const res = await $fetch(`/groups/${id}`, {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+      group.value = res
+      return { data: group.value, error: null }
+    } catch (err: any) {
+      console.error(err)
+      error.value = 'Gagal memuat data Group'
+      return { data: null, error: err }
+    } finally {
+      loading.value = false
+    }
   }
-}
-
 
   const create = async (payload: FormData) => {
     try {
@@ -75,7 +72,7 @@ export const useGroups = () => {
         baseURL: apiBase,
         method: 'POST',
         body: payload,
-        headers: getHeaders(), // hanya Accept, Content-Type diatur otomatis
+        headers: getHeaders(),
         credentials: 'include'
       })
       return res
@@ -87,7 +84,11 @@ export const useGroups = () => {
 
   const update = async (id: number, payload: FormData) => {
     try {
-      payload.append('_method', 'PUT')
+      // Pastikan _method sudah ada di payload sebelum dikirim
+      if (!payload.has('_method')) {
+        payload.append('_method', 'PUT')
+      }
+
       const res = await $fetch(`/groups/${id}`, {
         baseURL: apiBase,
         method: 'POST',
@@ -116,7 +117,7 @@ export const useGroups = () => {
     }
   }
 
-  // alias supaya component tetep jalan
+  // Alias supaya component tetap jalan
   const getGroups = fetchAll
   const getGroup = fetchById
   const createGroup = create
