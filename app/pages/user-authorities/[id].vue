@@ -2,10 +2,13 @@
 import { reactive, ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserAuthorities } from '~/composables/useUserAuthorities'
+import { useToast } from '#imports'
 
 const route = useRoute()
 const router = useRouter()
-const { fetchById, update, loading } = useUserAuthorities()
+const toast = useToast()
+
+const { fetchById, update, fetchRoles, loading, userAuthority, roles } = useUserAuthorities()
 
 const form = reactive({
   user_id: null as number | null,
@@ -13,7 +16,6 @@ const form = reactive({
   role_id: null as number | null
 })
 
-const roles = ref<{ id: number; name: string }[]>([])
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
@@ -24,23 +26,17 @@ const selectedRole = computed(() => {
 onMounted(async () => {
   try {
     const id = Number(route.params.id)
+    await fetchRoles() // load roles dulu biar dropdown ready
     const data = await fetchById(id)
-    if (!data) throw new Error('Data user authority tidak ditemukan.')
 
-    // ambil data user langsung dari backend (tanpa composable)
-    const userRes = await $fetch(`http://localhost:8000/api/users/${data.user_id}`)
-    form.user_id = data.user_id
-    form.username = userRes?.username || `User #${data.user_id}`
-    form.role_id = data.role_id
-
-    // ambil semua role untuk combo box
-    const roleRes = await $fetch(`http://localhost:8000/api/roles`)
-    roles.value = Array.isArray(roleRes)
-      ? roleRes.sort((a, b) => a.name.localeCompare(b.name)) // urutin a-z
-      : []
-  } catch (err: any) {
-    console.error(err)
-    serverError.value = err.message || 'Gagal memuat data'
+    if (data) {
+      form.user_id = data.user_id
+      form.username = data.user?.username ?? ''
+      form.role_id = data.role_id
+    }
+  } catch (err) {
+    console.error('Gagal load data user authority:', err)
+    serverError.value = 'Gagal memuat data user authority.'
   }
 })
 
@@ -59,6 +55,13 @@ const updateData = async () => {
       user_id: Number(form.user_id),
       role_id: Number(form.role_id)
     })
+
+    toast.add({
+      title: 'Berhasil!',
+      description: 'User authority berhasil diperbarui.',
+      color: 'green',
+    })
+
     router.push('/user-authorities')
   } catch (err: any) {
     console.error('update error', err)
@@ -76,13 +79,7 @@ const updateData = async () => {
       <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">
         Edit User Authority
       </h1>
-      <UButton
-        to="/user-authorities"
-        icon="i-heroicons-arrow-left"
-        color="gray"
-        variant="soft"
-        label="Back"
-      />
+      <UButton to="/user-authorities" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Back" />
     </div>
 
     <!-- Loading -->
@@ -96,13 +93,9 @@ const updateData = async () => {
           <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
             User
           </label>
-          <input
-            v-model="form.username"
-            type="text"
-            readonly
+          <input v-model="form.username" type="text" readonly
             class="w-full px-3 py-2 text-sm rounded-lg cursor-not-allowed"
-            style="background: var(--ui-bg-muted); border: 1px solid var(--ui-border); color: var(--ui-text-dimmed);"
-          />
+            style="background: var(--ui-bg-muted); border: 1px solid var(--ui-border); color: var(--ui-text-dimmed);" />
         </div>
 
         <!-- Role Select -->
@@ -110,18 +103,10 @@ const updateData = async () => {
           <label class="block mb-2 text-sm font-semibold" style="color: var(--ui-text-highlighted);">
             Role
           </label>
-          <select
-            v-model.number="form.role_id"
-            required
-            class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
-            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
-          >
+          <select v-model.number="form.role_id" required class="w-full px-3 py-2 text-sm rounded-lg transition-colors"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);">
             <option value="" disabled>Pilih Role</option>
-            <option
-              v-for="role in roles"
-              :key="role.id"
-              :value="role.id"
-            >
+            <option v-for="role in roles" :key="role.id" :value="role.id">
               {{ role.name }}
             </option>
           </select>
@@ -136,31 +121,17 @@ const updateData = async () => {
         </div>
 
         <!-- Error Alert -->
-        <div
-          v-if="serverError"
-          class="px-4 py-3 rounded-lg text-sm"
-          style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;"
-        >
+        <div v-if="serverError" class="px-4 py-3 rounded-lg text-sm"
+          style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;">
           {{ serverError }}
         </div>
 
         <!-- Action Buttons -->
         <div class="flex items-center gap-3 pt-2">
-          <UButton
-            type="submit"
-            :loading="saving"
-            :disabled="saving"
-            color="primary"
-            icon="i-heroicons-check-circle"
-            :label="saving ? 'Updating...' : 'Update'"
-          />
-          <UButton
-            color="gray"
-            variant="soft"
-            icon="i-heroicons-x-mark"
-            label="Cancel"
-            @click="router.push('/user-authorities')"
-          />
+          <UButton type="submit" :loading="saving" :disabled="saving" color="primary" icon="i-heroicons-check-circle"
+            :label="saving ? 'Updating...' : 'Update'" />
+          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Cancel"
+            @click="router.push('/user-authorities')" />
         </div>
       </form>
     </UCard>

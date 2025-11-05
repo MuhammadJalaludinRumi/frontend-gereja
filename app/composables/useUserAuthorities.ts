@@ -1,130 +1,169 @@
-// composables/useUserAuthorities.ts
 import { ref } from 'vue'
+import { useApiUrl } from './useApiUrl'
+import { useCookie, useRuntimeConfig } from '#app'
 
-const API_URL = 'http://127.0.0.1:8000/api/user-authorities'
-
-export function useUserAuthorities() {
+export const useUserAuthorities = () => {
+  const apiBase = useApiUrl()
   const userAuthorities = ref<any[]>([])
-  const userAuthority = ref<any | null>(null)
+  const userAuthority = ref<any>(null)
+  const users = ref<any[]>([])
+  const roles = ref<any[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const parseResponse = async (res: Response) => {
-    const ct = res.headers.get('content-type') || ''
-    if (ct.includes('application/json')) {
-      return res.json()
+  const config = useRuntimeConfig()
+  const isProd = config.public.sessionSecureCookie === 'true'
+
+  const xsrfToken = useCookie('XSRF-TOKEN').value
+  const token = useCookie('token').value
+
+  const getHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
     }
-    // fallback: return plaintext (html or other)
-    return res.text()
+
+    if (isProd && xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
+    if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
+
+    return headers
   }
 
-  const handleResponse = async (res: Response) => {
-    const body = await parseResponse(res)
-    if (!res.ok) {
-      // Try to extract a friendly message
-      let msg = ''
-      if (typeof body === 'string') {
-        msg = body
-      } else if (body && (body as any).message) {
-        msg = (body as any).message
-      } else {
-        msg = JSON.stringify(body)
-      }
-      throw new Error(`HTTP ${res.status}: ${msg}`)
-    }
-    return body
-  }
-
+  // 🧠 Ambil semua user authorities
   const fetchAll = async () => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(API_URL)
-      const data = await handleResponse(res)
-      userAuthorities.value = Array.isArray(data) ? data : []
-      return userAuthorities.value
-    } catch (err: any) {
-      console.error('fetchAll error', err)
-      error.value = err.message || String(err)
-      throw err
+      const res = await $fetch('/user-authorities', {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+      userAuthorities.value = Array.isArray(res) ? res : []
+    } catch (err) {
+      console.error('fetchAll error:', err)
+      error.value = 'Gagal memuat data User Authorities'
     } finally {
       loading.value = false
     }
   }
 
+  // 🧠 Ambil detail authority (udah include relasi user & role dari backend)
   const fetchById = async (id: number) => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(`${API_URL}/${id}`)
-      const data = await handleResponse(res)
-      userAuthority.value = data
-      return data
-    } catch (err: any) {
-      console.error('fetchById error', err)
-      error.value = err.message || String(err)
-      throw err
+      const authority = await $fetch(`/user-authorities/${id}`, {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+
+      userAuthority.value = authority
+      return authority
+    } catch (err) {
+      console.error('fetchById error:', err)
+      error.value = 'Gagal memuat detail User Authority'
+      return null
     } finally {
       loading.value = false
     }
   }
 
-  const create = async (payload: { user: number; role: number }) => {
+  // 🧠 Ambil semua user buat combo box
+  const fetchUsers = async () => {
     try {
-      const res = await fetch(API_URL, {
+      const res = await $fetch('/users', {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+      users.value = Array.isArray(res)
+        ? res.sort((a, b) => a.username.localeCompare(b.username))
+        : []
+    } catch (err) {
+      console.error('fetchUsers error:', err)
+    }
+  }
+
+  // 🧠 Ambil semua role buat combo box
+  const fetchRoles = async () => {
+    try {
+      const res = await $fetch('/roles', {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+      roles.value = Array.isArray(res)
+        ? res.sort((a, b) => a.name.localeCompare(b.name))
+        : []
+    } catch (err) {
+      console.error('fetchRoles error:', err)
+    }
+  }
+
+  // 🧠 Create baru
+  const create = async (payload: { user_id: number; role_id: number }) => {
+    try {
+      const res = await $fetch('/user-authorities', {
+        baseURL: apiBase,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
+        headers: getHeaders(),
+        credentials: 'include',
+        body: payload
       })
-      const data = await handleResponse(res)
-      return data
+      return res
     } catch (err) {
-      console.error('create error', err)
-      throw err
+      console.error('create error:', err)
+      throw new Error('Gagal membuat User Authority')
     }
   }
 
-  const update = async (id: number, payload: { user: number; role: number }) => {
+  // 🧠 Update
+  const update = async (id: number, payload: { user_id: number; role_id: number }) => {
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
+      const res = await $fetch(`/user-authorities/${id}`, {
+        baseURL: apiBase,
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
+        headers: getHeaders(),
+        credentials: 'include',
+        body: payload
       })
-      const data = await handleResponse(res)
-      return data
+      return res
     } catch (err) {
-      console.error('update error', err)
-      throw err
+      console.error('update error:', err)
+      throw new Error('Gagal memperbarui User Authority')
     }
   }
 
+  // 🧠 Delete
   const remove = async (id: number) => {
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
+      await $fetch(`/user-authorities/${id}`, {
+        baseURL: apiBase,
         method: 'DELETE',
-        headers: { Accept: 'application/json' },
+        headers: getHeaders(),
+        credentials: 'include'
       })
-      // some APIs return 204 with empty body
-      if (!res.ok) {
-        const body = await parseResponse(res)
-        throw new Error(`HTTP ${res.status}: ${typeof body === 'string' ? body : JSON.stringify(body)}`)
-      }
     } catch (err) {
-      console.error('delete error', err)
-      throw err
+      console.error('delete error:', err)
+      throw new Error('Gagal menghapus User Authority')
     }
   }
 
   return {
     userAuthorities,
     userAuthority,
-    loading,
-    error,
+    users,
+    roles,
     fetchAll,
     fetchById,
+    fetchUsers,
+    fetchRoles,
     create,
     update,
     remove,
+    loading,
+    error
   }
 }
