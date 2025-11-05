@@ -1,11 +1,50 @@
 <script setup lang="ts">
-const emit = defineEmits<{
-  toggleSidebar: []
-}>()
+import type { DropdownMenuItem } from '@nuxt/ui'
+import { useCookie } from '#app'
 
+const emit = defineEmits<{ toggleSidebar: [] }>()
 const route = useRoute()
 const router = useRouter()
 
+// Fungsi logout
+const logout = () => {
+  console.log('Logout clicked')
+
+  // Hapus token di localStorage
+  localStorage.removeItem('token')
+
+  // Kalau lo pake cookie, bisa bersihin juga:
+  useCookie('token').value = null
+  useCookie('XSRF-TOKEN').value = null
+
+  // Optional: hapus user data dari store/composable auth kalau ada
+  // useAuth().clearUser()
+
+  // Redirect ke login
+  router.push('/login')
+}
+
+// Items untuk dropdown profile
+const profileItems: DropdownMenuItem[][] = [
+  [
+    {
+      label: 'Setting Profile',
+      icon: 'i-lucide-settings',
+      onSelect: () => {
+        router.push('/profile')
+      }
+    }
+  ],
+  [
+    {
+      label: 'Logout',
+      icon: 'i-lucide-log-out',
+      onSelect: logout
+    }
+  ]
+]
+
+// data buat dropdown "Go to"
 const groups = computed(() => [
   {
     id: 'links',
@@ -26,52 +65,26 @@ const groups = computed(() => [
       { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users' },
       { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups' }
     ]
-  },
-  {
-    id: 'code',
-    label: 'Code',
-    items: [
-      {
-        id: 'source',
-        label: 'View page source',
-        icon: 'i-simple-icons-github',
-        to: `https://github.com/nuxt-ui-templates/dashboard/blob/main/app/pages${route.path === '/' ? '/index' : route.path}.vue`,
-        target: '_blank'
-      }
-    ]
   }
 ])
-
-const profileItems = [
-  [{
-    label: 'Pengaturan',
-    icon: 'i-lucide-settings',
-    click: () => {
-      router.push('/profile')
-    }
-  }],
-  [{
-    label: 'Logout',
-    icon: 'i-lucide-log-out',
-    click: () => {
-      // Tambahkan logic logout di sini
-      console.log('Logout clicked')
-      // Contoh: router.push('/login')
-    }
-  }]
-]
 </script>
 
 <template>
-  <!-- Navbar fixed di atas, pakai warna dari var(--ui-bg) dan var(--ui-border) -->
-  <UDashboardNavbar class="fixed top-0 left-0 right-0 z-50 border-b"
-    style="background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text);">
+  <UDashboardNavbar
+    class="fixed top-0 left-0 right-0 z-50 border-b"
+    style="background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text);"
+  >
     <!-- Kiri -->
     <template #left>
-      <UButton icon="i-lucide-menu" color="gray" variant="ghost" @click="emit('toggleSidebar')" />
+      <UButton
+        icon="i-lucide-menu"
+        color="gray"
+        variant="ghost"
+        @click="emit('toggleSidebar')"
+      />
     </template>
 
-    <!-- Tengah (search bar) -->
+    <!-- Tengah -->
     <template #center>
       <UDashboardSearch :groups="groups" />
     </template>
@@ -84,18 +97,16 @@ const profileItems = [
           <UButton icon="i-lucide-bell" color="gray" variant="ghost" />
         </UTooltip>
 
-        <UDropdown :popper="{ placement: 'bottom-end', strategy: 'fixed' }">
-          <!-- Trigger -->
-          <template #trigger="{ open }">
-            <UButton icon="i-lucide-user-circle" color="gray" variant="ghost" class="!text-gray-700 dark:!text-gray-200"
-              aria-label="Profile menu" />
-          </template>
-          <!-- Isi dropdown -->
-          <template #items>
-            <UDropdownItem icon="i-lucide-settings" label="Pengaturan" @click="router.push('/profile')" />
-            <UDropdownItem icon="i-lucide-log-out" label="Logout" @click="console.log('Logout clicked')" />
-          </template>
-        </UDropdown>
+        <!-- Dropdown Profile -->
+        <UDropdownMenu :items="profileItems">
+          <UButton
+            icon="i-lucide-user-circle"
+            color="gray"
+            variant="ghost"
+            class="!text-gray-700 dark:!text-gray-200"
+            aria-label="Profile menu"
+          />
+        </UDropdownMenu>
       </div>
     </template>
   </UDashboardNavbar>
