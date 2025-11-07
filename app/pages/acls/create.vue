@@ -40,6 +40,12 @@
 </template>
 
 <script setup lang="ts">
+
+definePageMeta({
+  middleware: ['role'],
+  roles: [1, 4]
+})
+
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAcls } from '~/composables/useAcls'

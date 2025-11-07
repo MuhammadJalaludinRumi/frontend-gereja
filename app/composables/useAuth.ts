@@ -6,8 +6,8 @@ import { navigateTo } from '#app'
 export const useAuth = () => {
   const apiBase = useApiUrl()
   const isProd = process.env.NODE_ENV === 'production'
-  const user = ref<any>(null)
-  const token = useCookie('token', { secure: false, sameSite: 'lax', maxAge: 60*60*24*7 }) // hanya dev
+  const token = useCookie('token', { secure: false, sameSite: 'lax', maxAge: 60*60*24*7 })
+  const user = useState<any>('auth_user', () => null)
   const sanctumBase = useSanctumUrl()
 
   const login = async (username: string, password: string) => {

@@ -145,6 +145,11 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  middleware: ['role'],
+  roles: [1]
+})
+
 import { ref, onMounted } from 'vue'
 import { useUsers } from '~/composables/useUsers'
 

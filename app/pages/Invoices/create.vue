@@ -1,4 +1,9 @@
 <script setup lang="ts">
+definePageMeta({
+  middleware: ['role'],
+  roles: [1]
+})
+
 import { ref, onMounted, computed } from 'vue'
 import { useInvoices } from '~/composables/useInvoices'
 import { useRouter } from '#app'

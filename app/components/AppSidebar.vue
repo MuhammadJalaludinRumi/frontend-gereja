@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
+import { useAuth } from '~/composables/useAuth'
 
 const props = defineProps<{
   modelValue: boolean
@@ -14,22 +15,39 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const links = [[
-  { label: 'Home', icon: 'i-lucide-house', to: '/', onSelect: () => (isOpen.value = false) },
-  { label: 'Acls', icon: 'i-lucide-shield-check', to: '/acls', onSelect: () => (isOpen.value = false) },
-  { label: 'City', icon: 'i-lucide-map-pin', to: '/city', onSelect: () => (isOpen.value = false) },
-  { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', onSelect: () => (isOpen.value = false) },
-  { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', onSelect: () => (isOpen.value = false) },
-  { label: 'News', icon: 'i-lucide-newspaper', to: '/news', onSelect: () => (isOpen.value = false) },
-  { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', onSelect: () => (isOpen.value = false) },
-  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', onSelect: () => (isOpen.value = false) },
-  { label: 'Provinces', icon: 'i-lucide-map', to: '/province', onSelect: () => (isOpen.value = false) },
-  { label: 'Role management', icon: 'i-lucide-crown', to: '/roles', onSelect: () => (isOpen.value = false) },
-  { label: 'Rules', icon: 'i-lucide-scale', to: '/rules', onSelect: () => (isOpen.value = false) },
-  { label: 'User Authorities', icon: 'i-lucide-shield', to: '/user-authorities', onSelect: () => (isOpen.value = false) },
-  { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users', onSelect: () => (isOpen.value = false) },
-  { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', onSelect: () => (isOpen.value = false) }
-]]
+const { user } = useAuth()
+
+const allLinks: NavigationMenuItem[] = [
+  { label: 'Home', icon: 'i-lucide-house', to: '/', roles: [1,4] },
+  { label: 'Acls', icon: 'i-lucide-shield-check', to: '/acls', roles: [1, 4] },
+  { label: 'City', icon: 'i-lucide-map-pin', to: '/city', roles: [1] },
+  { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
+  { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
+  { label: 'Members', icon: 'i-lucide-users', to: '/members', roles: [1,4] },
+  { label: 'Marriages', icon: 'i-lucide-heart', to: '/marriages', roles: [1,4] },
+  { label: 'News', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
+  { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
+  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1,4] },
+  { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
+  { label: 'Role management', icon: 'i-lucide-crown', to: '/roles', roles: [1, 4] },
+  { label: 'Rules', icon: 'i-lucide-scale', to: '/rules', roles: [1, 4] },
+  { label: 'User Authorities', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
+  { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
+  { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] }
+]
+
+const userRole = computed(() => {
+  return user.value?.role?.name ?? user.value?.role ?? user.value?.role_id
+})
+
+// Filter link berdasarkan role user
+const linksFiltered = computed(() => {
+  return allLinks.filter(link => link.roles?.includes(userRole.value))
+    .map(link => ({
+      ...link,
+      onSelect: () => (isOpen.value = false)
+    }))
+})
 </script>
 
 <template>
@@ -44,7 +62,7 @@ const links = [[
           <div v-if="!collapsed" class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Navigasi
           </div>
-          <UNavigationMenu :collapsed="collapsed" :items="links[0]" orientation="vertical" tooltip popover />
+          <UNavigationMenu :collapsed="collapsed" :items="linksFiltered" orientation="vertical" tooltip popover />
         </template>
         <template #footer="{ collapsed }">
           <UserMenu :collapsed="collapsed" />

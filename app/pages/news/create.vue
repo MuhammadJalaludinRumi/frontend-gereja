@@ -1,4 +1,9 @@
 <script setup lang="ts">
+definePageMeta({
+  middleware: ['role'],
+  roles: [1]
+})
+
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNews } from '~/composables/useNews'
