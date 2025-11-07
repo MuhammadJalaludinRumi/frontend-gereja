@@ -130,6 +130,12 @@
 </template>
 
 <script setup lang="ts">
+
+definePageMeta({
+  middleware: ['role'],
+  roles: [1, 4]
+})
+
 import { ref, onMounted } from 'vue'
 import { useAcls } from '~/composables/useAcls'
 

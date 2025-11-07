@@ -1,0 +1,207 @@
+<script setup lang="ts">
+definePageMeta({
+  middleware: ['role'],
+  roles: [4],
+})
+
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useMembers } from '~/composables/useMembers'
+import { useMarriages } from '~/composables/useMarriages'
+
+const router = useRouter()
+const route = useRoute()
+
+const { members, fetchAll: fetchMembers } = useMembers()
+const { marriage, fetchById, update, loading: loadingMarriage, error: marriageError } = useMarriages()
+
+const loading = ref(true)
+const saving = ref(false)
+const serverError = ref<string | null>(null)
+
+const form = reactive({
+  bride: null as number | null,
+  bride_name: '',
+  groom: null as number | null,
+  groom_name: '',
+  date: '',
+  venue: '',
+  priest: null as number | null,
+  priest_name: '',
+  is_active: 1,
+})
+
+const onBrideChange = (e: Event) => {
+  const id = Number((e.target as HTMLSelectElement).value) || null
+  form.bride = id
+  form.bride_name = id ? members.value.find(x => x.id === id)?.name || '' : ''
+}
+
+const onGroomChange = (e: Event) => {
+  const id = Number((e.target as HTMLSelectElement).value) || null
+  form.groom = id
+  form.groom_name = id ? members.value.find(x => x.id === id)?.name || '' : ''
+}
+
+const onPriestChange = (e: Event) => {
+  const id = Number((e.target as HTMLSelectElement).value) || null
+  form.priest = id
+  form.priest_name = id ? members.value.find(x => x.id === id)?.name || '' : ''
+}
+
+// Load members & marriage detail
+const loadData = async () => {
+  loading.value = true
+  serverError.value = null
+  try {
+    await fetchMembers()
+    const id = Number(route.params.id)
+    await fetchById(id)
+    if (marriage.value) {
+      form.bride = marriage.value.bride ?? null
+      form.bride_name = marriage.value.bride_name
+      form.groom = marriage.value.groom ?? null
+      form.groom_name = marriage.value.groom_name
+      form.priest = marriage.value.priest ?? null
+      form.priest_name = marriage.value.priest_name
+      form.date = marriage.value.date
+      form.venue = marriage.value.venue ?? ''
+      form.is_active = marriage.value.is_active ?? 1
+    }
+  } catch (err) {
+    console.error('Gagal load data marriage:', err)
+    serverError.value = 'Gagal load data marriage.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadData)
+
+// SAVE / UPDATE FUNCTION
+const save = async () => {
+  serverError.value = null
+
+  if (!form.date || !form.venue) {
+    serverError.value = 'Tanggal & lokasi wajib diisi.'
+    return
+  }
+
+  // Pastikan nama terisi
+  if (form.bride) form.bride_name = members.value.find(x => x.id === form.bride)?.name || form.bride_name
+  if (form.groom) form.groom_name = members.value.find(x => x.id === form.groom)?.name || form.groom_name
+  if (form.priest) form.priest_name = members.value.find(x => x.id === form.priest)?.name || form.priest_name
+
+  if (!form.bride_name.trim() || !form.groom_name.trim() || !form.priest_name.trim()) {
+    serverError.value = 'Nama pengantin & pelayan wajib diisi.'
+    return
+  }
+
+  saving.value = true
+  try {
+    const payload = {
+      bride: form.bride || null,
+      bride_name: form.bride_name.trim(),
+      groom: form.groom || null,
+      groom_name: form.groom_name.trim(),
+      priest: form.priest || null,
+      priest_name: form.priest_name.trim(),
+      date: form.date,
+      venue: form.venue,
+      is_active: form.is_active,
+    }
+    await update(Number(route.params.id), payload)
+    router.push('/marriages')
+  } catch (err: any) {
+    console.error(err)
+    serverError.value = err?.message || 'Gagal update pernikahan'
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="p-6" style="background: var(--ui-bg); color: var(--ui-text)">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted)">
+        Edit Pernikahan
+      </h1>
+      <UButton to="/marriages" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Kembali" />
+    </div>
+
+    <div v-if="loading" class="text-sm opacity-70 mb-4">Loading data...</div>
+
+    <UCard v-else :ui="{ body: { padding: 'p-6' } }">
+      <form @submit.prevent="save" class="space-y-6">
+        <!-- Bride -->
+        <div>
+          <label class="font-semibold text-sm mb-2 block">Istri</label>
+          <select :value="form.bride || ''" @change="onBrideChange" class="w-full px-3 py-2 text-sm rounded-lg">
+            <option value="">Pilih anggota (kalau istri anggota)</option>
+            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+          <input v-model="form.bride_name" type="text" placeholder="Nama istri jika orang luar"
+            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+        </div>
+
+        <!-- Groom -->
+        <div>
+          <label class="font-semibold text-sm mb-2 block">Suami</label>
+          <select :value="form.groom || ''" @change="onGroomChange" class="w-full px-3 py-2 text-sm rounded-lg">
+            <option value="">Pilih anggota (kalau suami anggota)</option>
+            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+          <input v-model="form.groom_name" type="text" placeholder="Nama suami jika orang luar"
+            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+        </div>
+
+        <!-- Date + Venue -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="font-semibold text-sm mb-2 block">Tanggal Pemberkatan <span class="text-red-500">*</span></label>
+            <input type="datetime-local" v-model="form.date" required class="w-full px-3 py-2 text-sm rounded-lg" />
+          </div>
+          <div>
+            <label class="font-semibold text-sm mb-2 block">Lokasi Pemberkatan <span class="text-red-500">*</span></label>
+            <input v-model="form.venue" type="text" placeholder="Gereja / Lokasi" required
+              class="w-full px-3 py-2 text-sm rounded-lg" />
+          </div>
+        </div>
+
+        <!-- Priest -->
+        <div>
+          <label class="font-semibold text-sm mb-2 block">Pelayan Pemberkatan</label>
+          <select :value="form.priest || ''" @change="onPriestChange" class="w-full px-3 py-2 text-sm rounded-lg">
+            <option value="">Pilih pelayan (kalau anggota)</option>
+            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+          <input v-model="form.priest_name" type="text" placeholder="Nama pelayan jika orang luar"
+            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label class="font-semibold text-sm mb-2 block">Status Pernikahan</label>
+          <select v-model.number="form.is_active" class="w-full px-3 py-2 text-sm rounded-lg">
+            <option :value="1">Pasangan Saat Ini</option>
+            <option :value="0">Cerai Hidup / Cerai Mati</option>
+          </select>
+        </div>
+
+        <!-- Error Message -->
+        <div v-if="serverError" class="text-red-500 text-sm whitespace-pre-wrap border border-red-400 p-3 rounded">
+          {{ serverError }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 pt-2">
+          <UButton type="submit" :loading="saving" :disabled="saving" color="primary"
+            icon="i-heroicons-check-circle" :label="saving ? 'Menyimpan...' : 'Simpan'" />
+          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Batal"
+            @click="router.push('/marriages')" />
+        </div>
+      </form>
+    </UCard>
+  </div>
+</template>

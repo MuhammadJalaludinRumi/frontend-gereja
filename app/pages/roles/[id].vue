@@ -1,4 +1,9 @@
 <script setup lang="ts">
+definePageMeta({
+  middleware: ['role'],
+  roles: [1, 4]
+})
+
 import { reactive, ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRoles } from '~/composables/useRoles'

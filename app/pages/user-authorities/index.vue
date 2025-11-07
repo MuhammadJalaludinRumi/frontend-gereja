@@ -1,5 +1,10 @@
 <!-- pages/user-authorities/index.vue -->
 <script setup lang="ts">
+definePageMeta({
+  middleware: ['role'],
+  roles: [1]
+})
+
 import { ref, computed, onMounted } from 'vue'
 import { useUserAuthorities } from '~/composables/useUserAuthorities'
 

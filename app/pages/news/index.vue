@@ -1,4 +1,9 @@
 <script setup lang="ts">
+definePageMeta({
+  middleware: ['role'],
+  roles: [1]
+})
+
 import { onMounted } from 'vue'
 import { useNews } from '~/composables/useNews'
 
