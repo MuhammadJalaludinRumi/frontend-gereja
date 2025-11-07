@@ -1,88 +1,156 @@
 <template>
-  <div class="p-6 w-full max-w-3xl mx-auto" style="background: var(--ui-bg); color: var(--ui-text);">
+  <div class="p-6 w-full overflow-hidden" style="background: var(--ui-bg); color: var(--ui-text);">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Edit Economy</h1>
-      <UButton to="/economy" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Kembali" />
+      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Edit Data Occupation</h1>
+      <UButton to="/occupations" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Back" />
     </div>
 
-    <UCard :ui="{ body: { padding: 'p-6' } }" v-if="!loadingData">
-      <form @submit.prevent="updateData" class="space-y-4">
+    <div v-if="loading" class="mb-4 text-sm text-gray-400">
+      Sabar bro bentar, lagi ngambil data...
+    </div>
+
+    <UCard v-else :ui="{ body: { padding: 'p-6' } }">
+      <form @submit.prevent="save" class="space-y-6">
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Member -->
+
+          <!-- MEMBER -->
           <div>
-            <label class="block mb-1 font-semibold text-sm">Member</label>
-            <select v-model="form.member" class="w-full px-3 py-2 rounded-lg border" style="background: var(--ui-bg); border:1px solid var(--ui-border)">
+            <label class="block mb-2 text-sm font-semibold">Member <span class="text-red-500">*</span></label>
+            <select
+              v-model="form.member"
+              required
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            >
               <option value="">Pilih Member</option>
-              <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+              <option v-for="m in members" :key="m.id" :value="m.id">
+                {{ m.name }}
+              </option>
             </select>
           </div>
 
-          <!-- Update -->
+          <!-- COMPANY -->
           <div>
-            <label class="block mb-1 font-semibold text-sm">Update</label>
-            <input type="datetime-local" v-model="form.update" class="w-full px-3 py-2 rounded-lg border" style="background: var(--ui-bg); border:1px solid var(--ui-border)" />
+            <label class="block mb-2 text-sm font-semibold">Company</label>
+            <input
+              v-model="form.company"
+              type="text"
+              placeholder="Nama Perusahaan"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
 
-          <!-- Class -->
-          <div class="md:col-span-2">
-            <label class="block mb-1 font-semibold text-sm">Class</label>
-            <input type="text" v-model="form.class" placeholder="Contoh: A/B/C" class="w-full px-3 py-2 rounded-lg border" style="background: var(--ui-bg); border:1px solid var(--ui-border)" />
+          <!-- POSITION -->
+          <div>
+            <label class="block mb-2 text-sm font-semibold">Position</label>
+            <input
+              v-model="form.position"
+              type="text"
+              placeholder="Jabatan"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
+          </div>
+
+          <!-- YEAR START -->
+          <div>
+            <label class="block mb-2 text-sm font-semibold">Year Start</label>
+            <input
+              v-model="form.year_start"
+              type="number"
+              placeholder="2020"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
+          </div>
+
+          <!-- YEAR END -->
+          <div>
+            <label class="block mb-2 text-sm font-semibold">Year End</label>
+            <input
+              v-model="form.year_end"
+              type="number"
+              placeholder="2024 / kosongkan klo masih kerja"
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            />
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton type="submit" color="primary" :loading="saving" :disabled="saving" label="Update" icon="i-heroicons-check-circle" />
-          <UButton color="gray" variant="soft" label="Batal" @click="router.push('/economy')" icon="i-heroicons-x-mark" />
+        <!-- ERROR -->
+        <div
+          v-if="errorMessage"
+          class="px-4 py-3 rounded-lg text-sm"
+          style="background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;"
+        >
+          {{ errorMessage }}
         </div>
+
+        <!-- ACTION -->
+        <div class="flex items-center gap-3 pt-2">
+          <UButton type="submit" :loading="saving" :disabled="saving" color="primary" icon="i-heroicons-check-circle" :label="saving ? 'Nyimpen...' : 'Update Occupation'" />
+          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Batal" @click="router.push('/occupations')" />
+        </div>
+
       </form>
     </UCard>
-
-    <div v-else class="text-center text-sm text-gray-400">Loading data...</div>
   </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  middleware: ['role'],
-  roles: [4]
-})
+definePageMeta({ middleware: ['role'], roles: [4] })
 
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useEconomies } from '~/composables/useEconomies'
-import { useMembers } from '~/composables/useMembers'
+import { ref, reactive, onMounted } from "vue"
+import { useRouter, useRoute } from "vue-router"
+import { useOccupations } from "~/composables/useOccupations"
+import { useMembers } from "~/composables/useMembers"
 
 const router = useRouter()
 const route = useRoute()
-const id = Number(route.params.id)
 
-const { economy, fetchById, update, loading } = useEconomies()
+const { occupation, fetchById, update } = useOccupations()
 const { members, fetchAll: fetchMembers } = useMembers()
 
+const loading = ref(true)
 const saving = ref(false)
-const loadingData = ref(true)
+const errorMessage = ref<string | null>(null)
 
 const form = reactive({
-  member: '',
-  update: '',
-  class: ''
+  member: "",
+  company: "",
+  position: "",
+  year_start: "",
+  year_end: ""
 })
 
 onMounted(async () => {
-  await fetchMembers()
-  await fetchById(id)
-  Object.assign(form, economy.value)
-  loadingData.value = false
+  try {
+    const id = Number(route.params.id)
+    await Promise.all([fetchMembers(), fetchById(id)])
+
+    if (occupation.value) {
+      form.member = occupation.value.member
+      form.company = occupation.value.company
+      form.position = occupation.value.position
+      form.year_start = occupation.value.year_start
+      form.year_end = occupation.value.year_end
+    }
+  } catch (err) {
+    errorMessage.value = "Gagal ambil data, mampus kita wkwk."
+  } finally {
+    loading.value = false
+  }
 })
 
-const updateData = async () => {
+const save = async () => {
   saving.value = true
   try {
-    await update(id, form)
-    router.push('/economy')
+    await update(Number(route.params.id), form)
+    router.push("/occupations")
   } catch (err) {
-    console.error(err)
-    alert('Gagal update economy')
+    errorMessage.value = "Gagal update bro."
   } finally {
     saving.value = false
   }
