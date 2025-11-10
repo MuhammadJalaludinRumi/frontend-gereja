@@ -44,7 +44,7 @@
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.phone || '-' }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.email || '-' }}</td>
               <td class="px-3 py-3 text-sm max-w-[220px] truncate">{{ m.address || '-' }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.city?.name || '-' }}</td>
+              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ typeof m.city === 'object' ? m.city?.name : m.city || '-' }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.latitude || '-' }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.longitude || '-' }}</td>
 

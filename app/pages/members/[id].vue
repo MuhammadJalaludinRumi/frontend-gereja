@@ -121,7 +121,7 @@
               <input
                 v-model="form.nationality"
                 type="text"
-                placeholder="Indonesia"
+                placeholder="WNI/WNA"
                 class="w-full px-3 py-2 text-sm rounded-lg"
                 style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
               />
@@ -207,8 +207,7 @@
 
           <div class="mt-4">
             <label class="block mb-2 text-sm font-semibold">Kota & Provinsi</label>
-            <select
-              v-model="form.city"
+            <select v-model="form.city"
               class="w-full px-3 py-2 text-sm rounded-lg"
               style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
             >
@@ -560,11 +559,11 @@ const form = reactive({
   phone: "",
   email: "",
   address: "",
-  city: "",
+  city: null,
   latitude: "",
   longitude: "",
   photo: null as File|null,
-  photo_url: "", // untuk preview foto existing
+  photo_url: "",
   marriage: "",
   is_deceased: "0",
   is_active: "1",
@@ -596,78 +595,60 @@ const onPhotoChange = (e: Event) => {
 
 const formatDateForInput = (dateString: string) => {
   if (!dateString) return ""
-  // Jika format dari API adalah "YYYY-MM-DD HH:MM:SS", ambil bagian tanggal saja
   return dateString.split(' ')[0]
 }
 
 onMounted(async () => {
   try {
     const id = Number(route.params.id)
-    if (!id) {
-      serverError.value = "ID member tidak valid"
-      loading.value = false
-      return
-    }
+    await Promise.all([fetchCities(), fetchById(id)])
 
-    // Fetch cities dan member data
-    await Promise.all([
-      fetchCities(),
-      fetchById(id)
-    ])
-
-    // Populate form dengan data member yang sudah di-fetch
     if (member.value) {
       const m = member.value
-
-      form.id_local = m.id_local || ""
-      form.id_type = m.id_type || ""
-      form.id_number = m.id_number || ""
-      form.name = m.name || ""
-      form.dob = formatDateForInput(m.dob)
-      form.pob = m.pob || ""
-      form.nationality = m.nationality || ""
-      form.ethnic = m.ethnic || ""
-      form.sex = m.sex || ""
-      form.phone = m.phone || ""
-      form.email = m.email || ""
-      form.address = m.address || ""
-      form.city = m.city_id || m.city?.id || ""
-      form.latitude = m.latitude || ""
-      form.longitude = m.longitude || ""
-      form.photo_url = m.photo || ""
-      form.marriage = m.marriage || ""
-      form.is_deceased = String(m.is_deceased || 0)
-      form.is_active = String(m.is_active ?? 1)
-      form.family_id = m.family_id || ""
-      form.family_relation = m.family_relation || ""
-      form.religion = m.religion || ""
-      form.blood = m.blood || ""
-      form.baptist_date = formatDateForInput(m.baptist_date)
-      form.baptist_place = m.baptist_place || ""
-      form.baptist_host_name = m.baptist_host_name || ""
-      form.consecrate_date = formatDateForInput(m.consecrate_date)
-      form.consecrate_place = m.consecrate_place || ""
-      form.consecrate_host_name = m.consecrate_host_name || ""
-      form.attest_date = formatDateForInput(m.attest_date)
-      form.attest_origin = m.attest_origin || ""
+      Object.assign(form, {
+        id_local: m.id_local || "",
+        id_type: m.id_type || "",
+        id_number: m.id_number || "",
+        name: m.name || "",
+        dob: formatDateForInput(m.dob),
+        pob: m.pob || "",
+        nationality: m.nationality || "",
+        ethnic: m.ethnic || "",
+        sex: m.sex || "",
+        phone: m.phone || "",
+        email: m.email || "",
+        address: m.address || "",
+        city: m.city?.id ?? null,
+        latitude: m.latitude || "",
+        longitude: m.longitude || "",
+        photo_url: m.photo || "",
+        marriage: m.marriage || "",
+        is_deceased: String(m.is_deceased || 0),
+        is_active: String(m.is_active ?? 1),
+        family_id: m.family_id || "",
+        family_relation: m.family_relation || "",
+        religion: m.religion || "",
+        blood: m.blood || "",
+        baptist_date: formatDateForInput(m.baptist_date),
+        baptist_place: m.baptist_place || "",
+        baptist_host_name: m.baptist_host_name || "",
+        consecrate_date: formatDateForInput(m.consecrate_date),
+        consecrate_place: m.consecrate_place || "",
+        consecrate_host_name: m.consecrate_host_name || "",
+        attest_date: formatDateForInput(m.attest_date),
+        attest_origin: m.attest_origin || ""
+      })
     }
-  } catch (err) {
-    console.error(err)
-    serverError.value = "Gagal memuat data member atau kota."
   } finally {
     loading.value = false
   }
 })
 
 const save = async () => {
-  serverError.value = null
   saving.value = true
-
   try {
     const id = Number(route.params.id)
 
-    // Untuk update, gunakan object biasa (bukan FormData)
-    // kecuali kalau ada foto baru
     const payload: Record<string, any> = {
       name: form.name,
       id_local: form.id_local,
@@ -701,34 +682,23 @@ const save = async () => {
       attest_origin: form.attest_origin || null
     }
 
-    // Jika ada foto baru, gunakan FormData
     if (form.photo) {
       const fd = new FormData()
-      Object.keys(payload).forEach(key => {
-        if (payload[key] !== null) {
-          fd.append(key, payload[key])
-        }
-      })
-      fd.append('photo', form.photo)
-
-      // Laravel biasanya butuh _method=PUT untuk FormData
-      fd.append('_method', 'PUT')
-
+      Object.entries(payload).forEach(([k, v]) => v !== null && fd.append(k, v))
+      fd.append("photo", form.photo)
+      fd.append("_method", "PUT")
       await update(id, fd)
     } else {
-      // Tanpa foto, kirim sebagai JSON
       await update(id, payload)
     }
 
     router.push("/members")
-  } catch (err: any) {
-    console.error(err)
-    serverError.value = err?.message || "Gagal mengupdate data."
   } finally {
     saving.value = false
   }
 }
 </script>
+
 
 <style scoped>
 input:focus,

@@ -121,7 +121,7 @@
               <input
                 v-model="form.nationality"
                 type="text"
-                placeholder="Indonesia"
+                placeholder="WNI/WNA"
                 class="w-full px-3 py-2 text-sm rounded-lg"
                 style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
               />
@@ -571,7 +571,7 @@ const form = reactive({
   phone: "",
   email: "",
   address: "",
-  city: "",
+  city: null,
   latitude: "",
   longitude: "",
   photo: null as File|null,
@@ -632,6 +632,7 @@ const save = async () => {
         fd.append(key, form[key] as any)
       }
     })
+
 
     // foto kalau ada
     if (form.photo) fd.append("photo", form.photo)
