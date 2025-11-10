@@ -1,13 +1,17 @@
-// composables/useMembers.ts
 import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
+
+export interface City {
+  id: number
+  name: string
+}
 
 export interface Member {
   id?: number
   name: string
   photo?: string
-  city?: string | number
+  city?: City | number | null
   phone?: string
   email?: string
   address?: string
@@ -27,18 +31,15 @@ export const useMembers = () => {
   const xsrfToken = useCookie('XSRF-TOKEN').value
   const token = useCookie('token').value
 
-  // 🔹 Header builder (Sama persis kayak Organization)
   const getHeaders = (isFormData = false): Record<string, string> => {
-    const headers: Record<string, string> = {
-      Accept: 'application/json'
-    }
+    const headers: Record<string, string> = { Accept: 'application/json' }
     if (!isFormData) headers['Content-Type'] = 'application/json'
     if (isProd && xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
     if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
     return headers
   }
 
-  // 🔹 Fetch All
+  // GET ALL
   const fetchAll = async () => {
     loading.value = true
     error.value = null
@@ -57,7 +58,7 @@ export const useMembers = () => {
     }
   }
 
-  // 🔹 Fetch By ID
+  // GET DETAIL
   const fetchById = async (id: number | string) => {
     loading.value = true
     error.value = null
@@ -77,10 +78,20 @@ export const useMembers = () => {
     }
   }
 
-  // 🔹 Create (Support FormData buat photo S3)
+  // Helper buat rapihin city sebelum POST/PUT
+  const normalizePayload = (payload: any) => {
+    if (payload.city && typeof payload.city === 'object') {
+      payload.city = payload.city.id // yang disimpan cuma id
+    }
+    return payload
+  }
+
+  // CREATE
   const create = async (payload: FormData | Record<string, any>) => {
     try {
       const isFormData = payload instanceof FormData
+
+      if (!isFormData) payload = normalizePayload(payload)
 
       const res = await $fetch('/members', {
         baseURL: apiBase,
@@ -99,11 +110,16 @@ export const useMembers = () => {
     }
   }
 
-  // 🔹 Update (Support FormData + _method PUT)
+  // UPDATE
   const update = async (id: number | string, payload: FormData | Record<string, any>) => {
     try {
       const isFormData = payload instanceof FormData
-      if (isFormData && !payload.has('_method')) payload.append('_method', 'PUT')
+
+      if (isFormData) {
+        if (!payload.has('_method')) payload.append('_method', 'PUT')
+      } else {
+        payload = normalizePayload(payload)
+      }
 
       const res = await $fetch(`/members/${id}`, {
         baseURL: apiBase,
@@ -124,7 +140,7 @@ export const useMembers = () => {
     }
   }
 
-  // 🔹 Delete
+  // DELETE
   const remove = async (id: number | string) => {
     try {
       await $fetch(`/members/${id}`, {
@@ -133,7 +149,6 @@ export const useMembers = () => {
         headers: getHeaders(),
         credentials: 'include'
       })
-
       members.value = members.value.filter(m => m.id !== Number(id))
       return true
     } catch (err) {
