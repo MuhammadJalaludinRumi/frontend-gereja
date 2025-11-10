@@ -176,7 +176,7 @@ const save = async () => {
               Tanggal Pemberkatan <span class="text-red-500">*</span>
             </label>
             <input
-              type="datetime-local"
+              type="date"
               v-model="form.date"
               required
               class="w-full px-3 py-2 text-sm rounded-lg"

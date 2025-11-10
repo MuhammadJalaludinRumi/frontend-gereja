@@ -64,7 +64,15 @@ const loadData = async () => {
       form.groom_name = marriage.value.groom_name
       form.priest = marriage.value.priest ?? null
       form.priest_name = marriage.value.priest_name
-      form.date = marriage.value.date
+
+      // Format date: extract date only (YYYY-MM-DD)
+      const dateStr = marriage.value.date
+      if (dateStr) {
+        form.date = dateStr.split('T')[0].split(' ')[0]
+      } else {
+        form.date = ''
+      }
+
       form.venue = marriage.value.venue ?? ''
       form.is_active = marriage.value.is_active ?? 1
     }
@@ -114,7 +122,7 @@ const save = async () => {
     router.push('/marriages')
   } catch (err: any) {
     console.error(err)
-    serverError.value = err?.message || 'Gagal update pernikahan'
+    serverError.value = err?.data ? JSON.stringify(err.data, null, 2) : err.message
   } finally {
     saving.value = false
   }
@@ -134,72 +142,147 @@ const save = async () => {
 
     <UCard v-else :ui="{ body: { padding: 'p-6' } }">
       <form @submit.prevent="save" class="space-y-6">
+
         <!-- Bride -->
         <div>
           <label class="font-semibold text-sm mb-2 block">Istri</label>
-          <select :value="form.bride || ''" @change="onBrideChange" class="w-full px-3 py-2 text-sm rounded-lg">
+          <select
+            :value="form.bride || ''"
+            @change="onBrideChange"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+          >
             <option value="">Pilih anggota (kalau istri anggota)</option>
-            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+            <option v-for="m in members" :key="m.id" :value="m.id">
+              {{ m.name }}
+            </option>
           </select>
-          <input v-model="form.bride_name" type="text" placeholder="Nama istri jika orang luar"
-            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+          <div class="text-xs opacity-70 mt-2">Kalau bukan anggota → isi field di bawah.</div>
+          <input
+            v-model="form.bride_name"
+            type="text"
+            placeholder="Nama istri jika orang luar"
+            class="w-full px-3 py-2 text-sm rounded-lg mt-2"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+          />
         </div>
 
         <!-- Groom -->
         <div>
           <label class="font-semibold text-sm mb-2 block">Suami</label>
-          <select :value="form.groom || ''" @change="onGroomChange" class="w-full px-3 py-2 text-sm rounded-lg">
+          <select
+            :value="form.groom || ''"
+            @change="onGroomChange"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+          >
             <option value="">Pilih anggota (kalau suami anggota)</option>
-            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+            <option v-for="m in members" :key="m.id" :value="m.id">
+              {{ m.name }}
+            </option>
           </select>
-          <input v-model="form.groom_name" type="text" placeholder="Nama suami jika orang luar"
-            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+          <div class="text-xs opacity-70 mt-2">Kalau bukan anggota → isi field di bawah.</div>
+          <input
+            v-model="form.groom_name"
+            type="text"
+            placeholder="Nama suami jika orang luar"
+            class="w-full px-3 py-2 text-sm rounded-lg mt-2"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+          />
         </div>
 
         <!-- Date + Venue -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="font-semibold text-sm mb-2 block">Tanggal Pemberkatan <span class="text-red-500">*</span></label>
-            <input type="datetime-local" v-model="form.date" required class="w-full px-3 py-2 text-sm rounded-lg" />
+            <label class="font-semibold text-sm mb-2 block">
+              Tanggal Pemberkatan <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              v-model="form.date"
+              required
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+            />
           </div>
           <div>
-            <label class="font-semibold text-sm mb-2 block">Lokasi Pemberkatan <span class="text-red-500">*</span></label>
-            <input v-model="form.venue" type="text" placeholder="Gereja / Lokasi" required
-              class="w-full px-3 py-2 text-sm rounded-lg" />
+            <label class="font-semibold text-sm mb-2 block">
+              Lokasi Pemberkatan <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.venue"
+              type="text"
+              placeholder="Gereja / Lokasi"
+              required
+              class="w-full px-3 py-2 text-sm rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+            />
           </div>
         </div>
 
         <!-- Priest -->
         <div>
           <label class="font-semibold text-sm mb-2 block">Pelayan Pemberkatan</label>
-          <select :value="form.priest || ''" @change="onPriestChange" class="w-full px-3 py-2 text-sm rounded-lg">
+          <select
+            :value="form.priest || ''"
+            @change="onPriestChange"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+          >
             <option value="">Pilih pelayan (kalau anggota)</option>
-            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+            <option v-for="m in members" :key="m.id" :value="m.id">
+              {{ m.name }}
+            </option>
           </select>
-          <input v-model="form.priest_name" type="text" placeholder="Nama pelayan jika orang luar"
-            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+          <div class="text-xs opacity-70 mt-2">Kalau bukan anggota → isi field di bawah.</div>
+          <input
+            v-model="form.priest_name"
+            type="text"
+            placeholder="Nama pelayan jika orang luar"
+            class="w-full px-3 py-2 text-sm rounded-lg mt-2"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+          />
         </div>
 
         <!-- Status -->
         <div>
           <label class="font-semibold text-sm mb-2 block">Status Pernikahan</label>
-          <select v-model.number="form.is_active" class="w-full px-3 py-2 text-sm rounded-lg">
+          <select
+            v-model.number="form.is_active"
+            class="w-full px-3 py-2 text-sm rounded-lg"
+            style="background: var(--ui-bg); border: 1px solid var(--ui-border); color: var(--ui-text);"
+          >
             <option :value="1">Pasangan Saat Ini</option>
             <option :value="0">Cerai Hidup / Cerai Mati</option>
           </select>
         </div>
 
         <!-- Error Message -->
-        <div v-if="serverError" class="text-red-500 text-sm whitespace-pre-wrap border border-red-400 p-3 rounded">
+        <div
+          v-if="serverError"
+          class="text-red-500 text-sm whitespace-pre-wrap border border-red-400 p-3 rounded"
+          style="background: rgba(239,68,68,0.1);"
+        >
           {{ serverError }}
         </div>
 
         <!-- Action Buttons -->
         <div class="flex gap-3 pt-2">
-          <UButton type="submit" :loading="saving" :disabled="saving" color="primary"
-            icon="i-heroicons-check-circle" :label="saving ? 'Menyimpan...' : 'Simpan'" />
-          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Batal"
-            @click="router.push('/marriages')" />
+          <UButton
+            type="submit"
+            :loading="saving"
+            :disabled="saving"
+            color="primary"
+            icon="i-heroicons-check-circle"
+            :label="saving ? 'Menyimpan...' : 'Simpan'"
+          />
+          <UButton
+            color="gray"
+            variant="soft"
+            icon="i-heroicons-x-mark"
+            label="Batal"
+            @click="router.push('/marriages')"
+          />
         </div>
       </form>
     </UCard>

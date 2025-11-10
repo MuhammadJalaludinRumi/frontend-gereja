@@ -9,6 +9,36 @@
         label="Tambah Pernikahan" />
     </div>
 
+    <!-- Search Bar -->
+    <div class="mb-4">
+      <UInput
+        v-model="searchQuery"
+        icon="i-heroicons-magnifying-glass"
+        size="lg"
+        placeholder="Cari berdasarkan nama istri, suami, pelayan, atau lokasi..."
+        :ui="{ icon: { trailing: { pointer: '' } } }"
+      >
+        <template #trailing>
+          <UButton
+            v-show="searchQuery !== ''"
+            color="gray"
+            variant="link"
+            icon="i-heroicons-x-mark-20-solid"
+            :padded="false"
+            @click="searchQuery = ''"
+          />
+        </template>
+      </UInput>
+    </div>
+
+    <!-- Info & Results Count -->
+    <div class="mb-3 flex justify-between items-center">
+      <p class="text-sm" style="color: var(--ui-text-muted);">
+        Menampilkan {{ paginatedMarriages.length }} dari {{ filteredMarriages.length }} data pernikahan
+        <span v-if="searchQuery">(hasil pencarian)</span>
+      </p>
+    </div>
+
     <!-- Table Card -->
     <UCard :ui="{ body: { padding: '' } }" class="relative z-0 overflow-hidden">
       <div class="overflow-x-auto w-full">
@@ -28,7 +58,12 @@
           </thead>
 
           <tbody style="background: var(--ui-bg);">
-            <tr v-for="m in marriages" :key="m.id" class="transition-colors" :style="{
+            <tr v-if="paginatedMarriages.length === 0">
+              <td :colspan="tableHeaders.length + 1" class="px-3 py-8 text-center text-sm" style="color: var(--ui-text-muted);">
+                {{ searchQuery ? 'Tidak ada data yang cocok dengan pencarian' : 'Tidak ada data pernikahan' }}
+              </td>
+            </tr>
+            <tr v-for="m in paginatedMarriages" :key="m.id" class="transition-colors" :style="{
               borderBottom: '1px solid var(--ui-border)',
               background: 'var(--ui-bg)',
             }" @mouseover="hover = m.id" @mouseleave="hover = null" :class="{ 'hovered-row': hover === m.id }">
@@ -46,12 +81,11 @@
                   <small v-if="m.groomMember" class="text-xs">ID: {{ m.groomMember.id }}</small>
                 </div>
               </td>
-              <!-- Date -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ formatDateTime(m.date) }}</td>
+              <!-- Date (without time) -->
+              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ formatDate(m.date) }}</td>
 
               <!-- Venue -->
               <td class="px-3 py-3 text-sm max-w-[220px] truncate">{{ m.venue || '-' }}</td>
-
 
               <!-- Priest -->
               <td class="px-3 py-3 text-sm whitespace-nowrap">
@@ -66,9 +100,6 @@
                 <span :class="m.is_active ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
                   {{ m.is_active ? 'Pasangan Saat Ini' : 'Cerai (tercatat)' }}
                 </span>
-                <div v-if="m.is_active === 0" class="text-xs text-muted mt-1">
-                  (0 = cerai hidup / cerai mati — per data)
-                </div>
               </td>
 
               <!-- raw fields for clarity (optional columns: bride_name/groom_name/priest_name) -->
@@ -90,6 +121,40 @@
         </table>
       </div>
     </UCard>
+
+    <!-- Pagination -->
+    <div class="flex justify-between items-center mt-4">
+      <div class="text-sm" style="color: var(--ui-text-muted);">
+        Halaman {{ currentPage }} dari {{ totalPages }}
+      </div>
+      <div class="flex gap-2">
+        <UButton
+          icon="i-heroicons-chevron-left"
+          size="sm"
+          color="gray"
+          variant="soft"
+          :disabled="currentPage === 1"
+          @click="currentPage--"
+        />
+        <UButton
+          v-for="page in visiblePages"
+          :key="page"
+          size="sm"
+          :color="currentPage === page ? 'primary' : 'gray'"
+          :variant="currentPage === page ? 'solid' : 'soft'"
+          :label="String(page)"
+          @click="currentPage = page"
+        />
+        <UButton
+          icon="i-heroicons-chevron-right"
+          size="sm"
+          color="gray"
+          variant="soft"
+          :disabled="currentPage === totalPages"
+          @click="currentPage++"
+        />
+      </div>
+    </div>
 
     <!-- Delete Modal -->
     <Teleport to="body">
@@ -130,7 +195,7 @@ definePageMeta({
   roles: [4]
 })
 
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useMarriages } from '~/composables/useMarriages'
 
 const { marriages: marriagesRef, fetchAll, remove } = useMarriages()
@@ -139,12 +204,67 @@ const marriages = ref<any[]>([])
 const hover = ref<string | null>(null)
 const isDeleteModalOpen = ref(false)
 const selectedId = ref<string>('')
+const searchQuery = ref('')
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const tableHeaders = [
   'Istri', 'Suami', 'Tanggal', 'Lokasi',
   'Pelayan', 'Status',
   'Nama Istri', 'Nama Suami', 'Nama Pelayan'
 ]
+
+// Filter marriages based on search query
+const filteredMarriages = computed(() => {
+  if (!searchQuery.value) return marriages.value
+
+  const query = searchQuery.value.toLowerCase()
+  return marriages.value.filter(m => {
+    return (
+      m.brideMember?.name?.toLowerCase().includes(query) ||
+      m.bride_name?.toLowerCase().includes(query) ||
+      m.groomMember?.name?.toLowerCase().includes(query) ||
+      m.groom_name?.toLowerCase().includes(query) ||
+      m.priestMember?.name?.toLowerCase().includes(query) ||
+      m.priest_name?.toLowerCase().includes(query) ||
+      m.venue?.toLowerCase().includes(query)
+    )
+  })
+})
+
+// Calculate total pages
+const totalPages = computed(() => {
+  return Math.ceil(filteredMarriages.value.length / itemsPerPage) || 1
+})
+
+// Get paginated marriages
+const paginatedMarriages = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredMarriages.value.slice(start, end)
+})
+
+// Calculate visible page numbers (max 5 pages shown)
+const visiblePages = computed(() => {
+  const pages = []
+  const maxVisible = 5
+  let startPage = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  let endPage = Math.min(totalPages.value, startPage + maxVisible - 1)
+
+  if (endPage - startPage + 1 < maxVisible) {
+    startPage = Math.max(1, endPage - maxVisible + 1)
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i)
+  }
+  return pages
+})
+
+// Reset to page 1 when search query changes
+watch(searchQuery, () => {
+  currentPage.value = 1
+})
 
 const load = async () => {
   try {
@@ -155,6 +275,7 @@ const load = async () => {
     marriages.value = []
   }
 }
+
 onMounted(load)
 
 const openDeleteModal = (id: string | number) => {
@@ -173,22 +294,11 @@ const confirmDelete = async () => {
   }
 }
 
-const formatDateTime = (dateTime: string | null) => {
-  if (!dateTime) return '-'
-  // expect "YYYY-MM-DD hh:mm:ss" or ISO
-  const d = String(dateTime)
-  // try ISO parse fallback to simple split
-  const iso = new Date(d)
-  if (!isNaN(iso.getTime())) {
-    // format to YYYY-MM-DD hh:mm
-    const y = iso.getFullYear()
-    const mo = String(iso.getMonth() + 1).padStart(2, '0')
-    const da = String(iso.getDate()).padStart(2, '0')
-    const hh = String(iso.getHours()).padStart(2, '0')
-    const mm = String(iso.getMinutes()).padStart(2, '0')
-    return `${y}-${mo}-${da} ${hh}:${mm}`
-  }
-  return d.split('.')[0].replace('T', ' ')
+const formatDate = (d: any) => {
+  if (!d) return '-'
+  // Handle ISO format (2025-11-10T00:00:00.000000Z) or standard format (2025-11-10 00:00:00)
+  const dateOnly = d.split('T')[0].split(' ')[0]
+  return dateOnly
 }
 </script>
 
