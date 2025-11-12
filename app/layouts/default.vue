@@ -1,10 +1,19 @@
 <script setup lang="ts">
 const toast = useToast()
-const sidebarOpen = ref(false)
 const route = useRoute()
 
+// Default TERBUKA saat pertama load / refresh
+const sidebarOpen = ref(true)
+
+// Auto close sidebar saat pindah route
 watch(() => route.path, () => {
-  sidebarOpen.value = false
+  // Uncomment kalau mau tetap buka saat pindah route
+  // sidebarOpen.value = true
+
+  // Atau kalau mau auto close di mobile saja:
+  // if (window.innerWidth < 768) {
+  //   sidebarOpen.value = false
+  // }
 })
 
 const toggleSidebar = () => {
@@ -39,25 +48,27 @@ onMounted(async () => {
 </script>
 
 <template>
-  <UDashboardGroup
-    unit="rem"
-    class="min-h-screen bg-[var(--ui-bg)] text-[var(--ui-text)]"
-  >
-    <!-- Navbar -->
+  <div class="min-h-screen bg-[var(--ui-bg)] text-[var(--ui-text)]">
+    <!-- Navbar Fixed -->
     <AppNavbar
-      class="sticky top-0 z-50 border-b"
+      class="fixed top-0 left-0 right-0 z-50 border-b"
       style="background: var(--ui-bg); border-color: var(--ui-border);"
       @toggle-sidebar="toggleSidebar"
     />
 
-    <!-- Sidebar -->
+    <!-- Sidebar Fixed -->
     <AppSidebar v-model="sidebarOpen" />
 
-    <!-- Konten utama (otomatis di bawah navbar tanpa resize) -->
-    <div class="flex-1 overflow-auto mt-15">
+    <!-- Main Content - Cuma PUSH tanpa ubah ukuran -->
+    <main
+      class="pt-16 transition-all duration-300 ease-in-out"
+      :style="{
+        marginLeft: sidebarOpen ? '256px' : '0px'
+      }"
+    >
       <slot />
-    </div>
+    </main>
 
     <NotificationsSlideover />
-  </UDashboardGroup>
+  </div>
 </template>
