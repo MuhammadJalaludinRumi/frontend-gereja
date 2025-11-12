@@ -25,7 +25,7 @@ const allLinks: NavigationMenuItem[] = [
   { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
   { label: 'News', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
   { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
-  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1, 4] },
+  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
   { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
   { label: 'Role management', icon: 'i-lucide-crown', to: '/roles', roles: [1, 4] },
   { label: 'Rules', icon: 'i-lucide-scale', to: '/rules', roles: [1, 4] },
@@ -40,49 +40,39 @@ const allLinks: NavigationMenuItem[] = [
 ]
 
 const userRole = computed(() => {
-  return user.value?.role?.name ?? user.value?.role ?? user.value?.role_id
+  return user.value?.role?.id ?? user.value?.role_id ?? user.value?.role
 })
 
 // Filter link berdasarkan role user
 const linksFiltered = computed(() => {
   return allLinks.filter(link => link.roles?.includes(userRole.value))
-    .map(link => ({
-      ...link,
-      onSelect: () => (isOpen.value = false)
-    }))
 })
 </script>
 
 <template>
-  <!-- Overlay sidebar -->
-  <Transition name="fade">
-    <div v-if="isOpen" class="fixed inset-0 z-[9999] flex" style="background-color: rgba(0,0,0,0.5);"
-      @click.self="isOpen = false">
-      <UDashboardSidebar id="default" open collapsible resizable
-        class="bg-[var(--ui-bg)] text-[var(--ui-text)] w-64 h-full border-r border-[var(--ui-border)] shadow-xl"
-        :ui="{ footer: 'lg:border-t lg:border-default' }">
-        <template #default="{ collapsed }">
-          <div v-if="!collapsed" class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Navigasi
-          </div>
-          <UNavigationMenu :collapsed="collapsed" :items="linksFiltered" orientation="vertical" tooltip popover />
-        </template>
-        <template #footer="{ collapsed }">
-          <UserMenu :collapsed="collapsed" />
-        </template>
-      </UDashboardSidebar>
+  <!-- Sidebar fixed yang push content -->
+  <aside
+    class="fixed left-0 top-0 h-full bg-[var(--ui-bg)] border-r border-[var(--ui-border)] shadow-lg transition-transform duration-300 ease-in-out z-40"
+    :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
+    style="margin-top: 64px; width: 256px;"
+  >
+    <div class="flex flex-col h-full">
+      <!-- Navigation -->
+      <div class="flex-1 overflow-y-auto px-2 py-4">
+        <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          Navigasi
+        </div>
+        <UNavigationMenu
+          :items="linksFiltered"
+          orientation="vertical"
+          class="space-y-1"
+        />
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t border-[var(--ui-border)] p-2">
+        <UserMenu :collapsed="false" />
+      </div>
     </div>
-  </Transition>
+  </aside>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
