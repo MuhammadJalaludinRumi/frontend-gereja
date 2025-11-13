@@ -174,3 +174,5 @@ const formatDate = (d: any) => d ? d.split(' ')[0] : '-'
   background: var(--ui-bg-muted) !important;
 }
 </style>
+
+    <!-- Table Card -->
