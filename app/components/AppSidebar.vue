@@ -18,8 +18,45 @@ const isOpen = computed({
 const { user } = useAuth()
 
 const allLinks: NavigationMenuItem[] = [
-  { label: 'Home', icon: 'i-lucide-house', to: '/', roles: [1, 4] },
-  { label: 'Acls', icon: 'i-lucide-shield-check', to: '/acls', roles: [1, 4] },
+  // HOME
+  {
+    label: 'Home',
+    icon: 'i-lucide-house',
+    to: '/',
+    roles: [1, 4]
+  },
+
+  // =======================
+  // MEMBER DATA (DROPDOWN)
+  // =======================
+  {
+    label: 'Member Data',
+    icon: 'i-lucide-users',
+    children: [
+      { label: 'Members', to: '/members', roles: [4] },
+      { label: 'Marriages', to: '/marriages', roles: [4] },
+      { label: 'Economy', to: '/economy', roles: [4] },
+      { label: 'Educations', to: '/educations', roles: [4] },
+      { label: 'Occupations', to: '/occupations', roles: [1, 4] }
+    ]
+  },
+
+  // =======================
+  // ADMINISTRATION (DROPDOWN)
+  // =======================
+  {
+    label: 'Administration',
+    icon: 'i-lucide-shield-check',
+    children: [
+      { label: 'Acls', to: '/acls', roles: [1, 4] },
+      { label: 'Role Management', to: '/roles', roles: [1, 4] },
+      { label: 'Rules', to: '/rules', roles: [1, 4] }
+    ]
+  },
+
+  // =======================
+  // ADMIN LIST (NO DROPDOWN)
+  // =======================
   { label: 'City', icon: 'i-lucide-map-pin', to: '/city', roles: [1] },
   { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
   { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
@@ -27,30 +64,37 @@ const allLinks: NavigationMenuItem[] = [
   { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
   { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
   { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
-  { label: 'Role management', icon: 'i-lucide-crown', to: '/roles', roles: [1, 4] },
-  { label: 'Rules', icon: 'i-lucide-scale', to: '/rules', roles: [1, 4] },
   { label: 'User Authorities', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
   { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
-  { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] },
-  { label: 'Members', icon: 'i-lucide-users', to: '/members', roles: [4] },
-  { label: 'Marriages', icon: 'i-lucide-heart', to: '/marriages', roles: [4] },
-  { label: 'Economy', icon: 'i-lucide-scale', to: '/economy', roles: [4] },
-  { label: 'Educations', icon: 'i-lucide-receipt', to: '/educations', roles: [4] },
-  { label: 'Occupations', icon: 'i-lucide-users', to: '/occupations', roles: [1, 4] },
+  { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] }
 ]
 
+// Detect user role
 const userRole = computed(() => {
   return user.value?.role?.id ?? user.value?.role_id ?? user.value?.role
 })
 
-// Filter link berdasarkan role user
+// Role Filter (support nested children)
 const linksFiltered = computed(() => {
-  return allLinks.filter(link => link.roles?.includes(userRole.value))
+  return allLinks
+    .map(item => {
+      // jika group menu
+      if (item.children) {
+        const filteredChildren = item.children.filter(c =>
+          c.roles.includes(userRole.value)
+        )
+        if (filteredChildren.length === 0) return null
+        return { ...item, children: filteredChildren }
+      }
+
+      // normal menu
+      return item.roles?.includes(userRole.value) ? item : null
+    })
+    .filter(Boolean) as NavigationMenuItem[]
 })
 </script>
 
 <template>
-  <!-- Sidebar fixed yang push content -->
   <aside
     class="fixed left-0 top-0 h-full bg-[var(--ui-bg)] border-r border-[var(--ui-border)] shadow-lg transition-transform duration-300 ease-in-out z-40"
     :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
@@ -62,6 +106,8 @@ const linksFiltered = computed(() => {
         <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
           Navigasi
         </div>
+
+        <!-- Dropdown Navigation Menu -->
         <UNavigationMenu
           :items="linksFiltered"
           orientation="vertical"
