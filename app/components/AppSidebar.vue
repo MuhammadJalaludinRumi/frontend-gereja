@@ -16,6 +16,11 @@ const isOpen = computed({
 })
 
 const { user } = useAuth()
+console.log("USER:", user.value)
+
+const organizationId = computed(() => {
+  return user.value?.role?.organization_id
+})
 
 const allLinks: NavigationMenuItem[] = [
   // HOME
@@ -50,7 +55,12 @@ const allLinks: NavigationMenuItem[] = [
     children: [
       { label: 'Acls', to: '/acls', roles: [1, 4] },
       { label: 'Role Management', to: '/roles', roles: [1, 4] },
-      { label: 'Rules', to: '/rules', roles: [1, 4] }
+      { label: 'Rules', to: '/rules', roles: [1, 4] },
+      {
+        label: 'Organization',
+        to: () => `/organizations/${organizationId.value}`,
+        roles: [4]
+      }
     ]
   },
 
@@ -62,7 +72,7 @@ const allLinks: NavigationMenuItem[] = [
   { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
   { label: 'News', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
   { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
-  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
+  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1]},
   { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
   { label: 'User Authorities', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
   { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
@@ -78,16 +88,25 @@ const userRole = computed(() => {
 const linksFiltered = computed(() => {
   return allLinks
     .map(item => {
-      // jika group menu
       if (item.children) {
-        const filteredChildren = item.children.filter(c =>
-          c.roles.includes(userRole.value)
-        )
-        if (filteredChildren.length === 0) return null
+        const filteredChildren = item.children
+          .map(c => {
+            // khusus Organization → build link pake orgId
+            if (c.label === 'Organization') {
+              return {
+                ...c,
+                to: `/organizations/${organizationId.value}`
+              }
+            }
+            return c
+          })
+          .filter(c => c.roles.includes(userRole.value))
+
+        if (!filteredChildren.length) return null
+
         return { ...item, children: filteredChildren }
       }
 
-      // normal menu
       return item.roles?.includes(userRole.value) ? item : null
     })
     .filter(Boolean) as NavigationMenuItem[]
@@ -97,9 +116,7 @@ const linksFiltered = computed(() => {
 <template>
   <aside
     class="fixed left-0 top-0 h-full bg-[var(--ui-bg)] border-r border-[var(--ui-border)] shadow-lg transition-transform duration-300 ease-in-out z-40"
-    :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
-    style="margin-top: 64px; width: 256px;"
-  >
+    :class="isOpen ? 'translate-x-0' : '-translate-x-full'" style="margin-top: 64px; width: 256px;">
     <div class="flex flex-col h-full">
       <!-- Navigation -->
       <div class="flex-1 overflow-y-auto px-2 py-4">
@@ -108,11 +125,7 @@ const linksFiltered = computed(() => {
         </div>
 
         <!-- Dropdown Navigation Menu -->
-        <UNavigationMenu
-          :items="linksFiltered"
-          orientation="vertical"
-          class="space-y-1"
-        />
+        <UNavigationMenu :items="linksFiltered" orientation="vertical" class="space-y-1" />
       </div>
 
       <!-- Footer -->
