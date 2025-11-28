@@ -20,36 +20,65 @@ export interface Member {
 
 export const useMembers = () => {
   const apiBase = useApiUrl()
+
   const members = ref<Member[]>([])
+  const familyMembers = ref<Member[]>([])
   const member = ref<Member | null>(null)
+
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   const config = useRuntimeConfig()
   const isProd = config.public.sessionSecureCookie === 'true'
 
+  // cookies
   const xsrfToken = useCookie('XSRF-TOKEN').value
   const token = useCookie('token').value
 
+  // ======================
+  // GET HEADERS (1:1 with ACLS)
+  // ======================
   const getHeaders = (isFormData = false): Record<string, string> => {
-    const headers: Record<string, string> = { Accept: 'application/json' }
-    if (!isFormData) headers['Content-Type'] = 'application/json'
-    if (isProd && xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
-    if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
+    const headers: Record<string, string> = {
+      Accept: 'application/json'
+    }
+
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json'
+    }
+
+    // PRODUCTION (sanctum)
+    if (isProd) {
+      if (xsrfToken) {
+        headers['X-XSRF-TOKEN'] = xsrfToken
+      }
+    }
+
+    // LOCAL (Bearer token)
+    if (!isProd) {
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    }
+
     return headers
   }
 
-  // GET ALL
+  // ===========================
+  // GET ALL MEMBERS
+  // ===========================
   const fetchAll = async () => {
     loading.value = true
     error.value = null
+
     try {
       const res = await $fetch('/members', {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
       })
-      members.value = res.data ?? res
+
+      members.value = res?.data ?? res
     } catch (err) {
       error.value = 'Gagal memuat data member'
       console.error(err)
@@ -58,16 +87,20 @@ export const useMembers = () => {
     }
   }
 
-  // GET DETAIL
+  // ===========================
+  // GET MEMBER BY ID
+  // ===========================
   const fetchById = async (id: number | string) => {
     loading.value = true
     error.value = null
+
     try {
       const res = await $fetch(`/members/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
       })
+
       member.value = res
     } catch (err) {
       error.value = 'Gagal memuat detail member'
@@ -78,19 +111,51 @@ export const useMembers = () => {
     }
   }
 
-  // Helper buat rapihin city sebelum POST/PUT
+  // ===========================
+  // GET BY KK (family_id)
+  // ===========================
+  const fetchByKK = async (kk: string) => {
+    if (!kk) {
+      familyMembers.value = []
+      return
+    }
+
+    loading.value = true
+    error.value = null
+
+    try {
+      const res = await $fetch(`/members/by-kk/${kk}`, {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include'
+      })
+
+      familyMembers.value = res?.data ?? res
+    } catch (err) {
+      console.error('KK ERROR:', err)
+      error.value = "Gagal memuat data anggota keluarga"
+    } finally {
+      loading.value = false
+    }
+  }
+
+
+  // ===========================
+  // NORMALIZE PAYLOAD
+  // ===========================
   const normalizePayload = (payload: any) => {
     if (payload.city && typeof payload.city === 'object') {
-      payload.city = payload.city.id // yang disimpan cuma id
+      payload.city = payload.city.id
     }
     return payload
   }
 
-  // CREATE
+  // ===========================
+  // CREATE MEMBER
+  // ===========================
   const create = async (payload: FormData | Record<string, any>) => {
     try {
       const isFormData = payload instanceof FormData
-
       if (!isFormData) payload = normalizePayload(payload)
 
       const res = await $fetch('/members', {
@@ -103,21 +168,24 @@ export const useMembers = () => {
 
       const newMember = res?.data ?? res
       members.value.push(newMember)
+
       return newMember
     } catch (err: any) {
-      console.error('❌ CREATE ERROR:', err)
-      throw new Error(err?.data?.message || 'Gagal membuat member cuy')
+      console.error('CREATE ERROR:', err)
+      throw new Error(err?.data?.message || 'Gagal membuat member')
     }
   }
 
-  // UPDATE
+  // ===========================
+  // UPDATE MEMBER
+  // ===========================
   const update = async (id: number | string, payload: FormData | Record<string, any>) => {
     try {
       const isFormData = payload instanceof FormData
 
-      if (isFormData) {
-        if (!payload.has('_method')) payload.append('_method', 'PUT')
-      } else {
+      if (isFormData && !payload.has('_method')) {
+        payload.append('_method', 'PUT')
+      } else if (!isFormData) {
         payload = normalizePayload(payload)
       }
 
@@ -125,22 +193,27 @@ export const useMembers = () => {
         baseURL: apiBase,
         method: isFormData ? 'POST' : 'PUT',
         headers: getHeaders(isFormData),
-        body: payload,
-        credentials: 'include'
+        credentials: 'include',
+        body: payload
       })
 
       const updated = res?.data ?? res
+
       const idx = members.value.findIndex(m => m.id === Number(id))
-      if (idx !== -1) members.value[idx] = updated
+      if (idx !== -1) {
+        members.value[idx] = updated
+      }
 
       return updated
     } catch (err) {
-      console.error('❌ UPDATE ERROR:', err)
-      throw new Error('Gagal update member cuy')
+      console.error('UPDATE ERROR:', err)
+      throw new Error('Gagal update member')
     }
   }
 
-  // DELETE
+  // ===========================
+  // DELETE MEMBER
+  // ===========================
   const remove = async (id: number | string) => {
     try {
       await $fetch(`/members/${id}`, {
@@ -149,6 +222,7 @@ export const useMembers = () => {
         headers: getHeaders(),
         credentials: 'include'
       })
+
       members.value = members.value.filter(m => m.id !== Number(id))
       return true
     } catch (err) {
@@ -160,8 +234,10 @@ export const useMembers = () => {
   return {
     members,
     member,
+    familyMembers,
     fetchAll,
     fetchById,
+    fetchByKK,
     create,
     update,
     remove,

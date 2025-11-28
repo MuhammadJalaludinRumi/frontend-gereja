@@ -300,6 +300,8 @@
               >
                 <option value="">Pilih</option>
                 <option>Kepala Keluarga</option>
+                <option>Ayah</option>
+                <option>Ibu</option>
                 <option>Suami</option>
                 <option>Istri</option>
                 <option>Anak</option>
@@ -381,6 +383,52 @@
             </div>
           </div>
         </div>
+
+        <!-- Daftar Anggota Keluarga -->
+        <div
+          v-if="familyMembers.length > 0"
+          class="mt-6 border-t pt-4"
+          style="border-color: var(--ui-border);"
+        >
+          <h2 class="text-lg font-semibold mb-3" style="color: var(--ui-text-highlighted);">
+            Anggota Dalam Kartu Keluarga Ini
+          </h2>
+
+          <div class="space-y-3">
+            <div
+              v-for="member in familyMembers"
+              :key="member.id"
+              class="p-3 rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            >
+              <div class="font-semibold text-sm">
+                {{ member.name }}
+              </div>
+
+              <div class="text-xs opacity-80 mt-1 leading-relaxed">
+                • Hubungan: <b>{{ member.family_relation }}</b><br />
+                • Status:
+                <span v-if="member.is_deceased == 1" class="text-red-500">Meninggal</span>
+                <span v-else class="text-green-500">Hidup</span>
+                <br />
+                • Keanggotaan:
+                <span v-if="member.is_active == 1" class="text-green-500">Aktif</span>
+                <span v-else class="text-gray-500">Tidak Aktif</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jika belum ada anggota -->
+        <div
+          v-if="form.family_id && familyMembers.length === 0"
+          class="mt-6 text-sm text-gray-400"
+        >
+          Tidak ada anggota keluarga lain dengan nomor KK ini.
+        </div>
+
+        <!-- ▲▲▲ Tambahan Baru Berakhir Di Sini ▲▲▲ -->
+
 
         <!-- Data Baptis -->
         <div class="border-b pb-4" style="border-color: var(--ui-border);">
@@ -545,13 +593,13 @@ definePageMeta({
   roles: [4]
 })
 
-import { ref, reactive, onMounted } from "vue"
+import { ref, reactive, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useMembers } from "~/composables/useMembers"
 import { useCities } from "~/composables/useCity"
 
 const router = useRouter()
-const { create } = useMembers()
+const { members, fetchAll, create } = useMembers()
 const { cities, fetchAll: fetchCities } = useCities()
 
 const loading = ref(true)
@@ -575,12 +623,14 @@ const form = reactive({
   latitude: "",
   longitude: "",
   photo: null as File|null,
+
   marriage: "",
   is_deceased: "0",
   is_active: "1",
   family_id: "",
   family_relation: "",
   religion: "",
+
   blood: "",
   baptist_date: "",
   baptist_place: "",
@@ -594,68 +644,68 @@ const form = reactive({
 
 const photoPreview = ref<string|null>(null)
 
-const onPhotoChange = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0] || null
-  form.photo = file
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => (photoPreview.value = e.target?.result as string)
-    reader.readAsDataURL(file)
-  } else photoPreview.value = null
-}
-
 onMounted(async () => {
   try {
-    await fetchCities()
+    await Promise.all([
+      fetchCities(),
+      fetchAll()
+    ])
   } catch (err) {
-    console.error(err)
-    serverError.value = "Gagal memuat data kota."
+    serverError.value = "Gagal memuat data."
   } finally {
     loading.value = false
   }
 })
 
+// 🔥 INI YANG DIPAKAI DI TEMPLATE
+const familyMembersComputed = computed(() => {
+  if (!form.family_id) return []
+  return members.value.filter(m => m.family_id == form.family_id)
+})
+
+const familyMembers = familyMembersComputed
+
+const onPhotoChange = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0] || null
+  form.photo = file
+
+  if (!file) {
+    photoPreview.value = null
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    photoPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+}
+
 const save = async () => {
-  serverError.value = null
   saving.value = true
+  serverError.value = null
 
   try {
     const fd = new FormData()
 
-    // field wajib
-    fd.append("name", form.name || "")
-    fd.append("id_local", form.id_local || "")
-
-    // loop field lain kecuali photo
-    Object.keys(form).forEach((key) => {
-      if (key !== "photo" && form[key] !== "" && form[key] !== null) {
-        fd.append(key, form[key] as any)
+    for (const key in form) {
+      const value = form[key]
+      if (value !== null && value !== "") {
+        fd.append(key, value)
       }
-    })
+    }
 
+    if (form.photo) {
+      fd.append("photo", form.photo)
+    }
 
-    // foto kalau ada
-    if (form.photo) fd.append("photo", form.photo)
-
-    // CALL YANG BENER → tanpa param kedua
     await create(fd)
-
     router.push("/members")
+
   } catch (err: any) {
-    console.error(err)
     serverError.value = err?.message || "Gagal menyimpan data."
   } finally {
     saving.value = false
   }
 }
-
 </script>
-
-<style scoped>
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--ui-primary);
-}
-</style>

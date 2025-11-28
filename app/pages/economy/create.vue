@@ -25,14 +25,23 @@
 
           <div>
             <label class="block mb-1 font-semibold text-sm">Class</label>
-            <input type="text" v-model="form.class" placeholder="Contoh: A/B/C" class="w-full px-3 py-2 rounded-lg border"
-              style="background: var(--ui-bg); border:1px solid var(--ui-border)" />
+            <select v-model="form.class" class="w-full px-3 py-2 rounded-lg border"
+              style="background: var(--ui-bg); border:1px solid var(--ui-border)">
+              <option value="">Pilih Class</option>
+              <option value="miskin">Miskin</option>
+              <option value="rentan miskin">Rentan Miskin</option>
+              <option value="menuju menengah">Menuju Menengah</option>
+              <option value="menengah">Menengah</option>
+              <option value="atas">Atas</option>
+            </select>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 pt-2">
-          <UButton type="submit" color="primary" :loading="saving" :disabled="saving" label="Simpan" icon="i-heroicons-check-circle" />
-          <UButton color="gray" variant="soft" label="Batal" @click="router.push('/economy')" icon="i-heroicons-x-mark" />
+          <UButton type="submit" color="primary" :loading="saving" :disabled="saving" label="Simpan"
+            icon="i-heroicons-check-circle" />
+          <UButton color="gray" variant="soft" label="Batal" @click="router.push('/economy')"
+            icon="i-heroicons-x-mark" />
         </div>
       </form>
     </UCard>
