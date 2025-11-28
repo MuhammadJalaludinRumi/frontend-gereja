@@ -297,6 +297,8 @@
               >
                 <option value="">Pilih</option>
                 <option>Kepala Keluarga</option>
+                <option>Ayah</option>
+                <option>Ibu</option>
                 <option>Suami</option>
                 <option>Istri</option>
                 <option>Anak</option>
@@ -367,6 +369,49 @@
               </select>
             </div>
           </div>
+        </div>
+
+        <!-- Daftar Anggota Keluarga -->
+        <div
+          v-if="familyMembers.length > 0"
+          class="mt-6 border-t pt-4"
+          style="border-color: var(--ui-border);"
+        >
+          <h2 class="text-lg font-semibold mb-3" style="color: var(--ui-text-highlighted);">
+            Anggota Dalam Kartu Keluarga Ini
+          </h2>
+
+          <div class="space-y-3">
+            <div
+              v-for="member in familyMembers"
+              :key="member.id"
+              class="p-3 rounded-lg"
+              style="background: var(--ui-bg); border: 1px solid var(--ui-border);"
+            >
+              <div class="font-semibold text-sm">
+                {{ member.name }}
+              </div>
+
+              <div class="text-xs opacity-80 mt-1 leading-relaxed">
+                • Hubungan: <b>{{ member.family_relation }}</b><br />
+                • Status:
+                <span v-if="member.is_deceased == 1" class="text-red-500">Meninggal</span>
+                <span v-else class="text-green-500">Hidup</span>
+                <br />
+                • Keanggotaan:
+                <span v-if="member.is_active == 1" class="text-green-500">Aktif</span>
+                <span v-else class="text-gray-500">Tidak Aktif</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jika belum ada anggota -->
+        <div
+          v-if="form.family_id && familyMembers.length === 0"
+          class="mt-6 text-sm text-gray-400"
+        >
+          Tidak ada anggota keluarga lain dengan nomor KK ini.
         </div>
 
         <!-- Data Baptis -->
@@ -532,20 +577,31 @@ definePageMeta({
   roles: [4]
 })
 
-import { ref, reactive, onMounted } from "vue"
+import { ref, reactive, onMounted, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useMembers } from "~/composables/useMembers"
 import { useCities } from "~/composables/useCity"
 
 const router = useRouter()
 const route = useRoute()
-const { member, fetchById, update } = useMembers()
+
+// composable
+const {
+  member,
+  familyMembers,
+  fetchById,
+  fetchByKK,
+  update
+} = useMembers()
+
 const { cities, fetchAll: fetchCities } = useCities()
 
+// state
 const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
+// form
 const form = reactive({
   id_local: "",
   id_type: "",
@@ -581,8 +637,9 @@ const form = reactive({
   attest_origin: ""
 })
 
-const photoPreview = ref<string|null>(null)
+const photoPreview = ref<string | null>(null)
 
+// preview foto
 const onPhotoChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0] || null
   form.photo = file
@@ -590,21 +647,28 @@ const onPhotoChange = (e: Event) => {
     const reader = new FileReader()
     reader.onload = (e) => (photoPreview.value = e.target?.result as string)
     reader.readAsDataURL(file)
-  } else photoPreview.value = null
+  } else {
+    photoPreview.value = null
+  }
 }
 
 const formatDateForInput = (dateString: string) => {
   if (!dateString) return ""
-  return dateString.split(' ')[0]
+  return dateString.split(" ")[0]
 }
 
+// -----------------------------
+// FETCH DETAIL SAAT MASUK HALAMAN
+// -----------------------------
 onMounted(async () => {
   try {
     const id = Number(route.params.id)
+
     await Promise.all([fetchCities(), fetchById(id)])
 
     if (member.value) {
       const m = member.value
+
       Object.assign(form, {
         id_local: m.id_local || "",
         id_type: m.id_type || "",
@@ -623,8 +687,8 @@ onMounted(async () => {
         longitude: m.longitude || "",
         photo_url: m.photo || "",
         marriage: m.marriage || "",
-        is_deceased: String(m.is_deceased || 0),
-        is_active: String(m.is_active ?? 1),
+        is_deceased: form.is_deceased,
+        is_active: form.is_active,
         family_id: m.family_id || "",
         family_relation: m.family_relation || "",
         religion: m.religion || "",
@@ -638,23 +702,69 @@ onMounted(async () => {
         attest_date: formatDateForInput(m.attest_date),
         attest_origin: m.attest_origin || ""
       })
+
+      // fetch anggota keluarga SKRG
+      if (form.family_id) {
+        fetchByKK(form.family_id)
+      }
     }
   } finally {
     loading.value = false
   }
 })
 
+
+// ----------------------------------------------
+// WATCHER — Jika family_id diganti → auto fetch KK
+// ----------------------------------------------
+watch(
+  () => form.family_id,
+  (newKK) => {
+    if (newKK && newKK.length === 16) {
+      fetchByKK(newKK)
+    } else {
+      familyMembers.value = []
+    }
+  }
+)
+
+
+// ----------------------------------------------
+// SAVE
+// ----------------------------------------------
 const save = async () => {
   saving.value = true
+  serverError.value = null
+
   try {
     const id = Number(route.params.id)
+
+    // kepala keluarga → family_id = id_local
+    if (form.family_relation === "Kepala Keluarga") {
+      form.family_id = form.id_local
+    }
+
+    // validasi KK
+    if (form.family_id && form.family_id.length !== 16) {
+      serverError.value = "Nomor KK harus 16 digit."
+      saving.value = false
+      return
+    }
+
+    if (form.family_relation !== "Kepala Keluarga" && form.family_id === form.id_local) {
+      serverError.value = "Anggota non-KK tidak boleh memakai nomor induk sebagai KK."
+      saving.value = false
+      return
+    }
+
+    const fixDate = (d: string) => (d ? d : null)
 
     const payload: Record<string, any> = {
       name: form.name,
       id_local: form.id_local,
       id_type: form.id_type || null,
       id_number: form.id_number || null,
-      dob: form.dob || null,
+      dob: fixDate(form.dob),
       pob: form.pob || null,
       nationality: form.nationality || null,
       ethnic: form.ethnic || null,
@@ -662,31 +772,40 @@ const save = async () => {
       phone: form.phone || null,
       email: form.email || null,
       address: form.address || null,
-      city: form.city || null,
+      city_id: form.city || null,
       latitude: form.latitude || null,
       longitude: form.longitude || null,
       marriage: form.marriage || null,
-      is_deceased: form.is_deceased,
-      is_active: form.is_active,
+
+      is_deceased: Number(form.is_deceased),
+      is_active: Number(form.is_active),
+
       family_id: form.family_id || null,
       family_relation: form.family_relation || null,
       religion: form.religion || null,
       blood: form.blood || null,
-      baptist_date: form.baptist_date || null,
+
+      baptist_date: fixDate(form.baptist_date),
       baptist_place: form.baptist_place || null,
       baptist_host_name: form.baptist_host_name || null,
-      consecrate_date: form.consecrate_date || null,
+
+      consecrate_date: fixDate(form.consecrate_date),
       consecrate_place: form.consecrate_place || null,
       consecrate_host_name: form.consecrate_host_name || null,
-      attest_date: form.attest_date || null,
+
+      attest_date: fixDate(form.attest_date),
       attest_origin: form.attest_origin || null
     }
 
+    // jika upload foto → gunakan FormData
     if (form.photo) {
       const fd = new FormData()
-      Object.entries(payload).forEach(([k, v]) => v !== null && fd.append(k, v))
+      Object.entries(payload).forEach(([k, v]) => {
+        if (v !== null) fd.append(k, v)
+      })
       fd.append("photo", form.photo)
       fd.append("_method", "PUT")
+
       await update(id, fd)
     } else {
       await update(id, payload)
@@ -698,13 +817,3 @@ const save = async () => {
   }
 }
 </script>
-
-
-<style scoped>
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--ui-primary);
-}
-</style>

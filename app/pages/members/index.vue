@@ -26,12 +26,11 @@
 
           <tbody style="background: var(--ui-bg);">
             <tr v-for="m in members" :key="m.id" class="transition-colors"
-              :style="{ borderBottom: '1px solid var(--ui-border)' }"
-              @mouseover="hover = m.id" @mouseleave="hover = null"
-              :class="{ 'hovered-row': hover === m.id }">
+              :style="{ borderBottom: '1px solid var(--ui-border)' }" @mouseover="hover = m.id"
+              @mouseleave="hover = null" :class="{ 'hovered-row': hover === m.id }" @click="openDetail(m)">
 
-              <!-- ✅ TAMBAHAN: Nomor Induk Internal -->
-              <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">{{ m.id_local || '-' }}</td>
+              <!-- Nomor Induk -->
+              <td class=" px-3 py-3 text-sm font-medium whitespace-nowrap">{{ m.id_local || '-' }}</td>
 
               <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">{{ m.name }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.id_type || '-' }}</td>
@@ -79,8 +78,10 @@
 
               <td class="px-3 py-3 text-sm whitespace-nowrap">
                 <div class="flex justify-center gap-2">
-                  <UButton :to="`/members/${m.id}`" icon="i-heroicons-pencil-square" size="xs" color="blue" variant="soft" label="Edit" />
-                  <UButton @click.stop="openDeleteModal(m.id)" icon="i-heroicons-trash" size="xs" color="red" variant="soft" label="Delete" />
+                  <UButton :to="`/members/${m.id}`" icon="i-heroicons-pencil-square" size="xs" color="blue"
+                    variant="soft" label="Edit" />
+                  <UButton @click.stop="openDeleteModal(m.id)" icon="i-heroicons-trash" size="xs" color="red"
+                    variant="soft" label="Delete" />
                 </div>
               </td>
 
@@ -107,7 +108,7 @@
           </template>
 
           <div class="py-4">
-            <p style="color: var(--ui-text);">Yakin ingin menghapus data ini? Data jemaat sifatnya penting.</p>
+            <p style="color: var(--ui-text);">Yakin ingin menghapus data ini?</p>
           </div>
 
           <template #footer>
@@ -119,6 +120,15 @@
         </UCard>
       </div>
     </Teleport>
+
+    <!-- Modal Baru (Switch Member) -->
+    <MemberModal
+      :open="isOpen"
+      :member="selectedMember"
+      :all-members="allMembersData"
+      @update:open="isOpen = $event"
+      @switch-member="handleSwitchMember"
+    />
   </div>
 </template>
 
@@ -130,6 +140,7 @@ definePageMeta({
 
 import { ref, onMounted } from 'vue'
 import { useMembers } from '~/composables/useMembers'
+import MemberModal from '~/components/memberComponents/MemberDetailModal.vue'
 
 const { members: membersRef, fetchAll, remove } = useMembers()
 
@@ -139,7 +150,7 @@ const isDeleteModalOpen = ref(false)
 const selectedId = ref<number | null>(null)
 
 const tableHeaders = [
-  'No Induk',  // ✅ TAMBAHAN
+  'No Induk',
   'Nama', 'Jenis ID', 'Nomor ID', 'Tgl Lahir', 'Tempat Lahir', 'Warga Negara', 'Suku', 'Kelamin',
   'Telepon', 'Email', 'Alamat', 'Kota', 'Lat', 'Long', 'Foto', 'Perkawinan',
   'Meninggal', 'Aktif', 'No KK', 'Hubungan Keluarga', 'Agama', 'Gol Darah',
@@ -147,9 +158,18 @@ const tableHeaders = [
   'Tgl Jadi Jemaat', 'Gereja Asal'
 ]
 
+const isOpen = ref(false)
+const selectedMember = ref(null)
+const allMembersData = ref([])
+
+const handleSwitchMember = (newMember: any) => {
+  selectedMember.value = newMember
+}
+
 const fetchData = async () => {
   await fetchAll()
   members.value = membersRef.value
+  allMembersData.value = membersRef.value
 }
 onMounted(fetchData)
 
@@ -163,6 +183,16 @@ const confirmDelete = async () => {
   await remove(selectedId.value)
   isDeleteModalOpen.value = false
   fetchData()
+}
+
+const isDetailOpen = ref(false)
+const detailData = ref<any>(null)
+
+const openDetail = (m: any) => {
+  detailData.value = m
+  selectedMember.value = m
+  isDetailOpen.value = true
+  isOpen.value = true
 }
 
 const formatBool = (v: any) => v == 1 ? 'Ya' : 'Tidak'

@@ -36,6 +36,8 @@
                     variant="soft" />
                   <UButton @click="openDeleteModal(item.id)" icon="i-heroicons-trash" size="xs" color="red"
                     variant="soft" />
+                  <UButton :to="`/economy/${item.id}/history`" icon="i-heroicons-calendar-days" size="xs" color="amber"
+                    variant="soft" />
                 </div>
               </td>
             </tr>
