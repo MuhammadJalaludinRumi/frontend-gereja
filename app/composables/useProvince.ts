@@ -32,6 +32,7 @@ export const useProvinces = () => {
     return headers
   }
 
+  // GET ALL
   const fetchAll = async () => {
     loading.value = true
     error.value = null
@@ -50,5 +51,45 @@ export const useProvinces = () => {
     }
   }
 
-  return { provinces, fetchAll, loading, error }
+  // CREATE
+  const create = async (payload: any) => {
+    return await $fetch('/province', {
+      method: 'POST',
+      baseURL: apiBase,
+      headers: getHeaders(),
+      credentials: 'include',
+      body: payload
+    })
+  }
+
+  // UPDATE
+  const update = async (id: number, payload: any) => {
+    return await $fetch(`/province/${id}`, {
+      method: 'PUT',
+      baseURL: apiBase,
+      headers: getHeaders(),
+      credentials: 'include',
+      body: payload
+    })
+  }
+
+  // DELETE
+  const remove = async (id: number) => {
+    return await $fetch(`/province/${id}`, {
+      method: 'DELETE',
+      baseURL: apiBase,
+      headers: getHeaders(),
+      credentials: 'include'
+    })
+  }
+
+  return {
+    provinces,
+    fetchAll,
+    create,
+    update,
+    remove,
+    loading,
+    error
+  }
 }

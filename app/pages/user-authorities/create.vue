@@ -9,7 +9,7 @@ import { useRouter } from 'vue-router'
 import { useUserAuthorities } from '~/composables/useUserAuthorities'
 
 const router = useRouter()
-const { create } = useUserAuthorities()
+const { create, fetchRoles, fetchUsers, roles: rolesData, users: usersData } = useUserAuthorities()
 
 const form = reactive({
   user_id: null as number | null,
@@ -32,17 +32,11 @@ const selectedRole = computed(() => {
 
 onMounted(async () => {
   try {
-    // ambil semua users
-    const usersRes = await $fetch('http://localhost:8000/api/users/without-authority')
-    users.value = Array.isArray(usersRes)
-      ? usersRes.sort((a, b) => a.username.localeCompare(b.username))
-      : []
+    await Promise.all([fetchUsers(), fetchRoles()])
 
-    // ambil semua roles
-    const rolesRes = await $fetch('http://localhost:8000/api/roles')
-    roles.value = Array.isArray(rolesRes)
-      ? rolesRes.sort((a, b) => a.name.localeCompare(b.name))
-      : []
+    users.value = usersData.value
+    roles.value = rolesData.value
+
   } catch (err: any) {
     console.error(err)
     serverError.value = err.message || 'Gagal memuat data'

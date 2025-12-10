@@ -80,6 +80,7 @@
                 <div class="flex justify-center gap-2">
                   <UButton :to="`/members/${m.id}`" icon="i-heroicons-pencil-square" size="xs" color="blue"
                     variant="soft" label="Edit" />
+
                   <UButton @click.stop="openDeleteModal(m.id)" icon="i-heroicons-trash" size="xs" color="red"
                     variant="soft" label="Delete" />
                 </div>
@@ -159,8 +160,8 @@ const tableHeaders = [
 ]
 
 const isOpen = ref(false)
-const selectedMember = ref(null)
-const allMembersData = ref([])
+const selectedMember = ref<any | null>(null)
+const allMembersData = ref<any[]>([])
 
 const handleSwitchMember = (newMember: any) => {
   selectedMember.value = newMember

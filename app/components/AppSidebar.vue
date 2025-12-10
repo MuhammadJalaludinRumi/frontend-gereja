@@ -42,7 +42,7 @@ const allLinks: NavigationMenuItem[] = [
       { label: 'Marriages', to: '/marriages', roles: [4] },
       { label: 'Economy', to: '/economy', roles: [4] },
       { label: 'Educations', to: '/educations', roles: [4] },
-      { label: 'Occupations', to: '/occupations', roles: [1, 4] }
+      { label: 'Occupations', to: '/occupations', roles: [4] }
     ]
   },
 

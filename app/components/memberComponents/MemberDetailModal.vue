@@ -11,9 +11,24 @@
             style="background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-border);">
             <!-- HEADER -->
             <template #header>
-              <div class="flex items-center justify-between">
-                <h2 class="text-xl font-bold">{{ member?.name }}</h2>
-                <UButton icon="i-heroicons-x-mark" variant="ghost" @click="close" />
+              <div class="flex items-start justify-between">
+                <div class="flex flex-col items-center flex-1 py-2">
+                  <!-- Nomor Induk -->
+                  <p class="text-base text-gray-500 mb-2">{{ member?.id_local || '-' }}</p>
+
+                  <!-- Nama Besar dan Tebal -->
+                  <h2 class="text-3xl font-bold mb-3 text-center">{{ member?.name }}</h2>
+
+                  <!-- Foto -->
+                  <div v-if="member?.photo" class="mb-2">
+                    <img :src="member.photo" class="h-32 w-32 rounded-full object-cover border-4 border-gray-200 shadow-lg" />
+                  </div>
+                  <div v-else class="h-32 w-32 rounded-full bg-blue-600 flex items-center justify-center text-white text-4xl font-bold mb-2 shadow-lg">
+                    {{ member?.name?.charAt(0).toUpperCase() }}
+                  </div>
+                </div>
+
+                <UButton icon="i-heroicons-x-mark" variant="ghost" @click="close" class="ml-2" />
               </div>
             </template>
 
