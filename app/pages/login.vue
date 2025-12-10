@@ -8,9 +8,13 @@ import { ref, onMounted } from 'vue'
 
 import { useAuth } from '~/composables/useAuth'
 import { useNews } from '~/composables/useNews'
+import { useFormulirs } from '~/composables/useFormulirs'
+
 const { login, requestPasswordReset, verifyOtp, resetPassword } = useAuth()
+const { create: createFormulir } = useFormulirs()
 
 const showForgotPassword = ref(false)
+const showRequestForm = ref(false)
 
 const username = ref('')
 const password = ref('')
@@ -22,6 +26,13 @@ const step = ref("email")
 const otp = ref('')
 const resetToken = ref('')
 
+// Request Form
+const requestEmail = ref('')
+const requestMessage = ref('')
+const requestLoading = ref(false)
+const requestError = ref('')
+const requestSuccess = ref('')
+
 const { loginNews, fetchLoginNews } = useNews()
 
 onMounted(() => {
@@ -31,11 +42,31 @@ onMounted(() => {
 async function submitLogin() {
   loading.value = true
   error.value = ''
+  message.value = ''
+
   try {
-    await login(username.value, password.value)
+    const response = await login(username.value, password.value)
+
+    // Cek apakah login berhasil atau gagal dari response status
+    if (response && response.status === false) {
+      // Login gagal - tampilkan pesan error dari backend
+      error.value = response.message || 'Login gagal. Periksa username dan password Anda.'
+      loading.value = false
+      return
+    }
+
+    // Login berhasil
     await navigateTo('/')
+
   } catch (err: any) {
-    error.value = err.message || 'Username atau password salah'
+    // Ambil error message dari backend
+    const msg =
+      err?.response?._data?.message ||
+      err?.data?.message ||
+      err?.message ||
+      'Terjadi kesalahan, coba lagi.'
+
+    error.value = msg
   } finally {
     loading.value = false
   }
@@ -106,6 +137,33 @@ async function submitResetPassword() {
   }
 }
 
+async function submitRequestForm() {
+  requestLoading.value = true
+  requestError.value = ''
+  requestSuccess.value = ''
+
+  try {
+    await createFormulir({
+      email_pengguna: requestEmail.value,
+      pesan: requestMessage.value
+    })
+
+    requestSuccess.value = "Permintaan Anda berhasil dikirim! Kami akan segera menghubungi Anda."
+
+    // Reset form after 2 seconds
+    setTimeout(() => {
+      requestEmail.value = ''
+      requestMessage.value = ''
+      requestSuccess.value = ''
+      showRequestForm.value = false
+    }, 3000)
+  } catch (err: any) {
+    requestError.value = err.message || 'Gagal mengirim permintaan'
+  } finally {
+    requestLoading.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -123,7 +181,8 @@ async function submitResetPassword() {
         <!-- Navigation tabs - Hidden on mobile, visible on tablet+ -->
         <div class="hidden md:flex gap-6 lg:gap-12 text-base lg:text-xl">
           <a href="#" class="text-white font-semibold border-b-2 border-white pb-2">Login</a>
-          <a href="#" class="text-white hover:text-gray-300 transition">Formulir</a>
+          <button @click="showRequestForm = true; showForgotPassword = false"
+            class="text-white hover:text-gray-300 transition">Formulir</button>
           <a href="#" class="text-white hover:text-gray-300 transition">Bantuan</a>
           <a href="https://gkpawiligar.org/contact/" class="text-white hover:text-gray-300 transition">Kontak</a>
         </div>
@@ -131,7 +190,8 @@ async function submitResetPassword() {
         <!-- Mobile Navigation Menu (Hamburger) -->
         <div class="flex md:hidden gap-4 text-sm">
           <a href="#" class="text-white font-semibold border-b-2 border-white pb-1">Login</a>
-          <a href="#" class="text-white hover:text-gray-300 transition">Bantuan</a>
+          <button @click="showRequestForm = true; showForgotPassword = false"
+            class="text-white hover:text-gray-300 transition">Form</button>
           <a href="https://gkpawiligar.org/contact/" class="text-white hover:text-gray-300 transition">Kontak</a>
         </div>
       </div>
@@ -172,7 +232,7 @@ async function submitResetPassword() {
         </div>
 
         <!-- Right panel: Login form with subtle white glow on edges -->
-        <!-- Right panel: Login / Forgot Password -->
+        <!-- Right panel: Login / Forgot Password / Request Form -->
         <div class="w-full lg:max-w-sm mx-auto lg:mx-0">
           <div class="relative">
             <div class="absolute -inset-1 bg-white/20 rounded-2xl blur-md"></div>
@@ -180,7 +240,7 @@ async function submitResetPassword() {
             <div class="relative bg-black rounded-2xl p-6 sm:p-8 shadow-2xl border border-gray-700/50">
 
               <!-- ================= LOGIN FORM ================= -->
-              <template v-if="!showForgotPassword">
+              <template v-if="!showForgotPassword && !showRequestForm">
                 <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Selamat Datang</h2>
                 <p class="text-gray-400 text-sm mb-6 sm:mb-8">Silakan masukkan username dan password Anda.</p>
 
@@ -210,12 +270,75 @@ async function submitResetPassword() {
                       class="text-gray-400 hover:text-cyan-400 transition">
                       Lupa password?
                     </button>
+                    <button type="button" @click="showRequestForm = true"
+                      class="text-gray-400 hover:text-cyan-400 transition">
+                      Daftar Akun
+                    </button>
                   </div>
                 </form>
               </template>
 
+              <!-- Request Form Section -->
+      <template v-if="showRequestForm">
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Permintaan Akun</h2>
+        <p class="text-gray-400 text-sm mb-6 sm:mb-8">
+          Kirimkan permintaan Anda dan kami akan menghubungi Anda segera.
+        </p>
+
+        <!-- Success & Error Messages -->
+        <div v-if="requestSuccess" class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm">
+          {{ requestSuccess }}
+        </div>
+        <div v-if="requestError" class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm">
+          {{ requestError }}
+        </div>
+
+        <!-- Formulir -->
+        <form @submit.prevent="submitRequestForm" class="space-y-4 sm:space-y-5">
+          <input
+            v-model="requestEmail"
+            type="email"
+            placeholder="Email Anda"
+            required
+            class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
+          />
+
+          <textarea
+            v-model="requestMessage"
+            placeholder="Pesan / Keperluan Anda"
+            required
+            rows="4"
+            class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition resize-none"
+          ></textarea>
+
+          <button
+            type="submit"
+            :disabled="requestLoading"
+            class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition"
+          >
+            {{ requestLoading ? 'Mengirim...' : 'Kirim Permintaan' }}
+          </button>
+
+          <p class="text-xs text-gray-500 text-center mt-3">
+            Kami akan menghubungi Anda melalui email dalam 1-2 hari kerja
+          </p>
+        </form>
+
+        <!-- Back Button -->
+        <button
+          type="button"
+          @click="showRequestForm = false; requestError = ''; requestSuccess = ''; requestEmail = ''; requestMessage = ''"
+          class="w-full mt-6 text-sm text-gray-400 hover:text-cyan-400 transition flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Kembali ke Login
+        </button>
+      </template>
+
               <!-- ================= FORGOT PASSWORD FORM ================= -->
-              <template v-else>
+              <template v-else-if="showForgotPassword">
 
                 <!-- STEP EMAIL -->
                 <template v-if="step === 'email'">

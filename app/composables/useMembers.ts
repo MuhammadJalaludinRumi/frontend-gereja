@@ -35,6 +35,17 @@ export const useMembers = () => {
   const xsrfToken = useCookie('XSRF-TOKEN').value
   const token = useCookie('token').value
 
+  const toFormData = (obj: any) => {
+    const fd = new FormData()
+    Object.keys(obj).forEach(key => {
+      if (obj[key] !== null && obj[key] !== undefined) {
+        fd.append(key, obj[key])
+      }
+    })
+    return fd
+  }
+
+
   // ======================
   // GET HEADERS (1:1 with ACLS)
   // ======================
@@ -153,10 +164,19 @@ export const useMembers = () => {
   // ===========================
   // CREATE MEMBER
   // ===========================
-  const create = async (payload: FormData | Record<string, any>) => {
+  const create = async (payload: any) => {
     try {
-      const isFormData = payload instanceof FormData
-      if (!isFormData) payload = normalizePayload(payload)
+      let isFormData = payload instanceof FormData
+
+      if (!isFormData) {
+        payload = normalizePayload(payload)
+      }
+
+      // 🚀 kalau ada file → paksa jadi FormData
+      if (payload.photo instanceof File) {
+        payload = toFormData(payload)
+        isFormData = true
+      }
 
       const res = await $fetch('/members', {
         baseURL: apiBase,
@@ -168,7 +188,6 @@ export const useMembers = () => {
 
       const newMember = res?.data ?? res
       members.value.push(newMember)
-
       return newMember
     } catch (err: any) {
       console.error('CREATE ERROR:', err)
