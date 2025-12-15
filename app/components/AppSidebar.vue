@@ -65,6 +65,25 @@ const allLinks: NavigationMenuItem[] = [
   },
 
   // =======================
+  // ASSET MANAGEMENT (DROPDOWN) - UPDATED
+  // =======================
+  {
+    label: 'Asset Management',
+    icon: 'i-lucide-package',
+    children: [
+      { label: 'Assets', to: '/assets', roles: [4] },
+      { label: 'Asset Category', to: '/asset-categories', roles: [4] },
+      { label: 'Locations', to: '/locations', roles: [1, 4] },
+      { label: 'Asset Images', to: '/asset-images', roles: [1, 4] },
+      { label: 'Asset Loans', to: '/asset-loans', roles: [1, 4] },
+      { label: 'Asset Maintenances', to: '/asset-maintenances', roles: [1, 4] },
+      { label: 'Asset Movements', to: '/asset-movements', roles: [1, 4] },
+      { label: 'Asset Disposals', to: '/asset-disposals', roles: [1, 4] },
+      { label: 'Asset Documents', to: '/asset-documents', roles: [1, 4] }
+    ]
+  },
+
+  // =======================
   // ADMIN LIST (NO DROPDOWN)
   // =======================
   { label: 'City', icon: 'i-lucide-map-pin', to: '/city', roles: [1] },
@@ -72,7 +91,7 @@ const allLinks: NavigationMenuItem[] = [
   { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
   { label: 'News', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
   { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
-  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1]},
+  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
   { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
   { label: 'User Authorities', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
   { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
