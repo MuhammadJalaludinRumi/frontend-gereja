@@ -24,11 +24,9 @@ export const useAssetMovements = () => {
   const config = useRuntimeConfig()
   const isProd = config.public.sessionSecureCookie === 'true'
 
-  // Tokens
   const xsrfToken = useCookie('XSRF-TOKEN').value
   const token = useCookie('token').value
 
-  // Headers
   const getHeaders = (isFormData = false): Record<string, string> => {
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -49,19 +47,25 @@ export const useAssetMovements = () => {
     return headers
   }
 
+  // =====================
   // GET ALL
+  // =====================
   const fetchAll = async () => {
     loading.value = true
     error.value = null
 
     try {
-      const res = await $fetch('/asset-movements', {
+      const res: any = await $fetch('/asset-movements', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
       })
 
-      movements.value = res?.data ?? res
+      movements.value = Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res)
+        ? res
+        : []
     } catch (err) {
       console.error(err)
       error.value = 'Gagal memuat data perpindahan aset'
@@ -70,19 +74,21 @@ export const useAssetMovements = () => {
     }
   }
 
+  // =====================
   // GET ONE
+  // =====================
   const fetchById = async (id: number | string) => {
     loading.value = true
     error.value = null
 
     try {
-      const res = await $fetch(`/asset-movements/${id}`, {
+      const res: any = await $fetch(`/asset-movements/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
       })
 
-      movement.value = res?.data ?? res
+      movement.value = res?.data ?? res ?? null
     } catch (err) {
       console.error(err)
       error.value = 'Gagal memuat detail perpindahan'
@@ -92,60 +98,70 @@ export const useAssetMovements = () => {
     }
   }
 
+  // =====================
   // CREATE
+  // =====================
   const create = async (payload: Record<string, any>) => {
     try {
-      const res = await $fetch('/asset-movements', {
+      const res: any = await $fetch('/asset-movements', {
         baseURL: apiBase,
         method: 'POST',
         headers: getHeaders(),
         credentials: 'include',
-        body: payload
+        body: payload,
       })
 
       const newData = res?.data ?? res
-      movements.value.push(newData)
+      if (newData) movements.value.push(newData)
 
       return newData
     } catch (err: any) {
       console.error('CREATE ERROR:', err)
       throw new Error(
-        err.response?._data?.message || 'Gagal membuat data asset movement'
+        err?.response?._data?.message || 'Gagal membuat data asset movement'
       )
     }
   }
 
+  // =====================
   // UPDATE
+  // =====================
   const update = async (id: number | string, payload: Record<string, any>) => {
     try {
-      const res = await $fetch(`/asset-movements/${id}`, {
+      const res: any = await $fetch(`/asset-movements/${id}`, {
         baseURL: apiBase,
         method: 'PUT',
         headers: getHeaders(),
         credentials: 'include',
-        body: payload
+        body: payload,
       })
 
       const updated = res?.data ?? res
 
       const idx = movements.value.findIndex(m => m.id === Number(id))
-      if (idx !== -1) movements.value[idx] = updated
+      if (idx !== -1 && updated) {
+        movements.value[idx] = updated
+      }
 
       return updated
     } catch (err: any) {
       console.error('UPDATE ERROR:', err)
-      throw new Error(err.response?._data?.message || 'Gagal mengupdate movement')
+      throw new Error(
+        err?.response?._data?.message || 'Gagal mengupdate movement'
+      )
     }
   }
 
+  // =====================
   // DELETE
+  // =====================
   const remove = async (id: number | string) => {
     try {
       await $fetch(`/asset-movements/${id}`, {
         baseURL: apiBase,
         method: 'DELETE',
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
       })
 
       movements.value = movements.value.filter(m => m.id !== Number(id))
@@ -165,6 +181,6 @@ export const useAssetMovements = () => {
     update,
     remove,
     loading,
-    error
+    error,
   }
 }

@@ -2,6 +2,18 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
+/* =======================
+ * TYPES
+ * ======================= */
+
+export interface AssetDisposal {
+  id: number
+  disposal_date: string
+  disposal_type: 'dijual' | 'rusak' | 'hilang'
+  value?: number
+  notes?: string
+}
+
 export interface Asset {
   id?: number
   asset_code: string
@@ -11,40 +23,76 @@ export interface Asset {
   purchase_date?: string
   purchase_price?: number
   condition: string
-  status: string
   vendor?: string
   notes?: string
+  image?: File | string | null
+  disposal?: AssetDisposal | null
 }
+
+/* =======================
+ * COMPOSABLE
+ * ======================= */
 
 export const useAssets = () => {
   const apiBase = useApiUrl()
+
   const assets = ref<Asset[]>([])
   const asset = ref<Asset | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Runtime config
   const config = useRuntimeConfig()
   const isProd = config.public.sessionSecureCookie === 'true'
 
-  // Token
   const xsrfToken = useCookie('XSRF-TOKEN').value
   const token = useCookie('token').value
 
+  /* =======================
+   * HEADERS
+   * ======================= */
+
   const getHeaders = (isFormData = false): Record<string, string> => {
     const headers: Record<string, string> = {
-      Accept: 'application/json'
+      Accept: 'application/json',
     }
-    if (!isFormData) headers['Content-Type'] = 'application/json'
+
+    // ❗ jangan set Content-Type kalau FormData
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json'
+    }
+
     if (isProd && xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
     if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
+
     return headers
   }
 
-  // Fetch ALL
+  /* =======================
+   * HELPERS
+   * ======================= */
+
+  const toFormData = (payload: Record<string, any>) => {
+    const fd = new FormData()
+
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '') return
+
+      if (value instanceof File) {
+        fd.append(key, value)
+      } else {
+        fd.append(key, String(value))
+      }
+    })
+
+    return fd
+  }
+
+  /* =======================
+   * FETCH
+   * ======================= */
+
   const fetchAll = async () => {
     loading.value = true
-    error.value = null
     try {
       const res = await $fetch('/assets', {
         baseURL: apiBase,
@@ -52,18 +100,13 @@ export const useAssets = () => {
         credentials: 'include',
       })
       assets.value = res?.data ?? res
-    } catch (err) {
-      error.value = 'Gagal memuat data asset'
-      console.error(err)
     } finally {
       loading.value = false
     }
   }
 
-  // Fetch by ID
   const fetchById = async (id: number | string) => {
     loading.value = true
-    error.value = null
     try {
       const res = await $fetch(`/assets/${id}`, {
         baseURL: apiBase,
@@ -71,57 +114,73 @@ export const useAssets = () => {
         credentials: 'include',
       })
       asset.value = res?.data ?? res
-    } catch (err) {
-      error.value = 'Gagal memuat data asset'
-      asset.value = null
-      console.error(err)
     } finally {
       loading.value = false
     }
   }
 
-  // Create
-  const create = async (payload: Record<string, any>) => {
+  /* =======================
+   * CREATE
+   * ======================= */
+
+  const create = async (payload: Omit<Asset, 'id' | 'disposal'>) => {
     try {
+      const formData = toFormData(payload)
+
       const res = await $fetch('/assets', {
         baseURL: apiBase,
         method: 'POST',
-        headers: getHeaders(),
+        headers: getHeaders(true),
         credentials: 'include',
-        body: payload,
+        body: formData,
       })
 
       const newData = res?.data ?? res
       assets.value.push(newData)
       return newData
     } catch (err: any) {
-      console.error('❌ CREATE ASSET ERROR:', err)
-      throw new Error(err.response?._data?.message || 'Gagal membuat asset')
+      throw new Error(
+        err.response?._data?.message || 'Gagal membuat asset'
+      )
     }
   }
 
-  // Update
-  const update = async (id: number | string, payload: Record<string, any>) => {
+  /* =======================
+   * UPDATE
+   * ======================= */
+
+  const update = async (
+    id: number | string,
+    payload: Partial<Omit<Asset, 'id' | 'disposal'>>
+  ) => {
     try {
+      const formData = toFormData(payload)
+      formData.append('_method', 'PUT')
+
       const res = await $fetch(`/assets/${id}`, {
         baseURL: apiBase,
-        method: 'PUT',
-        headers: getHeaders(),
+        method: 'POST', // Laravel upload friendly
+        headers: getHeaders(true),
         credentials: 'include',
-        body: payload,
+        body: formData,
       })
 
       const updated = res?.data ?? res
       const idx = assets.value.findIndex(a => a.id === Number(id))
       if (idx !== -1) assets.value[idx] = updated
+
       return updated
     } catch (err: any) {
-      console.error('❌ UPDATE ASSET ERROR:', err)
-      throw new Error(err.response?._data?.message || 'Gagal memperbarui asset')
+      throw new Error(
+        err.response?._data?.message || 'Gagal update asset'
+      )
     }
   }
 
-  // Delete
+  /* =======================
+   * DELETE
+   * ======================= */
+
   const remove = async (id: number | string) => {
     try {
       await $fetch(`/assets/${id}`, {
@@ -133,21 +192,23 @@ export const useAssets = () => {
 
       assets.value = assets.value.filter(a => a.id !== Number(id))
       return true
-    } catch (err) {
-      console.error(err)
-      throw new Error('Gagal menghapus asset')
+    } catch (err: any) {
+      throw new Error(
+        err.response?._data?.message ||
+        'Asset tidak bisa dihapus karena punya riwayat'
+      )
     }
   }
 
   return {
     assets,
     asset,
+    loading,
+    error,
     fetchAll,
     fetchById,
     create,
     update,
     remove,
-    loading,
-    error
   }
 }
