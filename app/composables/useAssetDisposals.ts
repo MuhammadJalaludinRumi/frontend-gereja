@@ -43,14 +43,21 @@ export const useAssetDisposals = () => {
   const fetchAll = async () => {
     loading.value = true
     error.value = null
+
     try {
-      const res = await $fetch('/asset-disposals', {
+      const res: any = await $fetch('/asset-disposals', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
       })
-      disposals.value = res?.data ?? res
-    } catch {
+
+      disposals.value = Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res)
+        ? res
+        : []
+    } catch (err) {
+      console.error(err)
       error.value = 'Gagal memuat data disposal'
     } finally {
       loading.value = false
@@ -58,21 +65,24 @@ export const useAssetDisposals = () => {
   }
 
   // ==========================
-  // GET ONE (alias fetchById)
+  // GET ONE
   // ==========================
   const getOne = async (id: number | string) => {
     loading.value = true
     error.value = null
+
     try {
-      const res = await $fetch(`/asset-disposals/${id}`, {
+      const res: any = await $fetch(`/asset-disposals/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
       })
-      const data = res?.data ?? res
+
+      const data = res?.data ?? res ?? null
       disposal.value = data
       return data
-    } catch {
+    } catch (err) {
+      console.error(err)
       error.value = 'Gagal memuat detail disposal'
       disposal.value = null
       return null
@@ -86,19 +96,23 @@ export const useAssetDisposals = () => {
   // ==========================
   const create = async (payload: Record<string, any>) => {
     try {
-      const res = await $fetch('/asset-disposals', {
+      const res: any = await $fetch('/asset-disposals', {
         baseURL: apiBase,
         method: 'POST',
         headers: getHeaders(),
         credentials: 'include',
-        body: payload
+        body: payload,
       })
 
       const newData = res?.data ?? res
-      disposals.value.push(newData)
+      if (newData) disposals.value.push(newData)
+
       return newData
     } catch (err: any) {
-      throw new Error(err.response?._data?.message || 'Gagal membuat disposal')
+      console.error('CREATE ERROR:', err)
+      throw new Error(
+        err?.response?._data?.message || 'Gagal membuat disposal'
+      )
     }
   }
 
@@ -107,21 +121,26 @@ export const useAssetDisposals = () => {
   // ==========================
   const update = async (id: number | string, payload: Record<string, any>) => {
     try {
-      const res = await $fetch(`/asset-disposals/${id}`, {
+      const res: any = await $fetch(`/asset-disposals/${id}`, {
         baseURL: apiBase,
         method: 'PUT',
         headers: getHeaders(),
         credentials: 'include',
-        body: payload
+        body: payload,
       })
 
       const updated = res?.data ?? res
       const idx = disposals.value.findIndex(d => d.id === Number(id))
-      if (idx !== -1) disposals.value[idx] = updated
+      if (idx !== -1 && updated) {
+        disposals.value[idx] = updated
+      }
 
       return updated
     } catch (err: any) {
-      throw new Error(err.response?._data?.message || 'Gagal update disposal')
+      console.error('UPDATE ERROR:', err)
+      throw new Error(
+        err?.response?._data?.message || 'Gagal update disposal'
+      )
     }
   }
 
@@ -134,11 +153,13 @@ export const useAssetDisposals = () => {
         baseURL: apiBase,
         method: 'DELETE',
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
       })
+
       disposals.value = disposals.value.filter(d => d.id !== Number(id))
       return true
-    } catch {
+    } catch (err) {
+      console.error(err)
       throw new Error('Gagal hapus disposal')
     }
   }
@@ -147,11 +168,11 @@ export const useAssetDisposals = () => {
     disposals,
     disposal,
     fetchAll,
-    getOne,     // FIX: fungsi yang dipanggil di [id].vue
+    getOne,
     create,
     update,
     remove,
     loading,
-    error
+    error,
   }
 }
