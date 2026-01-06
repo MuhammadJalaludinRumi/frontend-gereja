@@ -181,7 +181,9 @@ onMounted(() => {
     <UCard v-if="loading">
       <div class="flex flex-col items-center justify-center py-12">
         <UIcon name="i-lucide-loader-2" class="size-8 animate-spin text-primary mb-4" />
-        <p class="text-sm text-muted">Memuat data dashboard...</p>
+        <p class="text-sm text-muted">
+          Memuat data dashboard...
+        </p>
       </div>
     </UCard>
 
@@ -320,7 +322,9 @@ onMounted(() => {
             <UIcon name="i-lucide-trending-up" class="size-5 text-primary" />
           </div>
           <div>
-            <p class="text-xs text-muted">Rata-rata per KK</p>
+            <p class="text-xs text-muted">
+              Rata-rata per KK
+            </p>
             <p class="text-lg font-semibold text-highlighted">
               {{ stats.kk > 0 ? (stats.members / stats.kk).toFixed(1) : '0' }} orang
             </p>
@@ -332,7 +336,9 @@ onMounted(() => {
             <UIcon name="i-lucide-percent" class="size-5 text-success" />
           </div>
           <div>
-            <p class="text-xs text-muted">% Pelayanan Aktif</p>
+            <p class="text-xs text-muted">
+              % Pelayanan Aktif
+            </p>
             <p class="text-lg font-semibold text-highlighted">
               {{ stats.members > 0 ? ((stats.pelayanan / stats.members) * 100).toFixed(1) : '0' }}%
             </p>
