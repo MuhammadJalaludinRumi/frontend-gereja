@@ -4,66 +4,60 @@ definePageMeta({
   roles: [1],
 });
 
-import { ref, onMounted } from "vue";
-import { useRoute, useRouter, useRuntimeConfig } from "#app";
-import { useNews, type News } from "~/composables/useNews";
+import { ref, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "#app";
+import { useReflections, type Reflection } from "~/composables/useReflections";
 
 const route = useRoute();
 const router = useRouter();
-// const config = useRuntimeConfig()
-const { fetchById, currentNews, loading, error, updateNews } = useNews();
 
-const form = ref<Partial<News>>({
+const { fetchById, currentReflection, update, loading, error } =
+  useReflections();
+
+const form = ref<Partial<Reflection>>({
   id: undefined,
   date_post: "",
   title: "",
   content: "",
-  thumbnail: "",
   image: "",
   status: 1,
 });
-
-// const loading = ref(true)
-const errorMessage = ref<string | null>(null);
 
 function formatDateForInput(dateString: string | null | undefined) {
   if (!dateString) return "";
   return dateString.replace(" ", "T").slice(0, 16);
 }
 
-onMounted(() => {
+onMounted(async () => {
   const id = Number(route.params.id);
   if (id) fetchById(id);
 });
 
-watch(currentNews, (news) => {
-  if (!news) return;
+watch(currentReflection, (reflection) => {
+  if (!reflection) return;
 
   form.value = {
-    id: news.id,
-    date_post: formatDateForInput(news.date_post),
-    title: news.title ?? "",
-    content: news.content ?? "",
-    thumbnail: news.thumbnail ?? "",
-    image: news.image ?? "",
-    status: news.status ?? 1,
+    id: reflection.id,
+    date_post: formatDateForInput(reflection.date_post),
+    title: reflection.title ?? "",
+    content: reflection.content ?? "",
+    image: reflection.image ?? "",
+    status: reflection.status ?? 1,
   };
 });
 
 const submit = async () => {
   try {
     loading.value = true;
-    errorMessage.value = null;
+    error.value = null;
 
-    await updateNews(Number(route.params.id), {
+    await update(Number(route.params.id), {
       ...form.value,
       date_post: form.value.date_post?.replace("T", " ") || "",
     });
-
-    router.push("/news");
   } catch (err) {
-    console.error("❌ Gagal update berita:", err);
-    errorMessage.value = "Gagal memperbarui berita.";
+    console.error("❌ Gagal update renungan:", err);
+    error.value = "Gagal memperbarui renungan.";
   } finally {
     loading.value = false;
   }
@@ -73,28 +67,24 @@ const submit = async () => {
 <template>
   <div class="p-6 mx-auto">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Edit Berita #{{ route.params.id }}</h1>
-      <UButton to="/news" icon="i-heroicons-arrow-left" color="neutral" variant="soft" label="Back" />
+      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted)">
+        Edit Renungan #{{ route.params.id }}
+      </h1>
+      <UButton
+        to="/reflection"
+        icon="i-heroicons-arrow-left"
+        color="neutral"
+        variant="soft"
+        label="Back"
+      />
     </div>
-    <UCard
-      class="rounded-2xl shadow-sm"
-    >
+    <UCard>
       <div v-if="loading" class="py-8 text-center text-gray-500">
         Memuat data...
       </div>
 
       <div v-else>
         <form @submit.prevent="submit" class="space-y-4 flex flex-col gap-3">
-          <div class="w-full">
-            <label class="block mb-2 text-sm font-semibold">Judul Berita</label>
-            <UInput
-              class="w-full"
-              v-model="form.title"
-              label="Judul Berita"
-              placeholder="Masukkan judul berita"
-              required
-            />
-          </div>
           <div>
             <label class="block mb-2 text-sm font-semibold"
               >Tanggal Posting</label
@@ -104,6 +94,16 @@ const submit = async () => {
               v-model="form.date_post"
               label="Tanggal Posting"
               type="datetime-local"
+              required
+            />
+          </div>
+          <div class="w-full">
+            <label class="block mb-2 text-sm font-semibold">Judul Berita</label>
+            <UInput
+              class="w-full"
+              v-model="form.title"
+              label="Judul Berita"
+              placeholder="Masukkan judul berita"
               required
             />
           </div>
@@ -118,28 +118,13 @@ const submit = async () => {
             />
           </div>
           <div>
-            <label class="block mb-2 text-sm font-semibold"
-              >URL Thumbnail</label
-            >
+            <label class="block mb-1 font-medium">Image URL</label>
             <UInput
-              class="w-full"
-              v-model="form.thumbnail"
-              label="URL Thumbnail"
-              placeholder="https://..."
-            />
-          </div>
-          <div>
-            <label class="block mb-2 text-sm font-semibold"
-              >URL Gambar Utama</label
-            >
-            <UInput
-              class="w-full"
               v-model="form.image"
-              label="URL Gambar Utama"
-              placeholder="https://..."
+              placeholder="Opsional"
+              class="w-full"
             />
           </div>
-
           <div>
             <label class="block mb-2 text-sm font-semibold">Status</label>
             <USelect
@@ -153,7 +138,11 @@ const submit = async () => {
           </div>
 
           <div class="flex justify-end gap-2 pt-4">
-            <UButton color="neutral" variant="soft" @click="router.push('/news')">
+            <UButton
+              color="neutral"
+              variant="soft"
+              @click="router.push('/reflection')"
+            >
               Batal
             </UButton>
             <UButton type="submit" color="primary" :loading="loading">
@@ -161,8 +150,8 @@ const submit = async () => {
             </UButton>
           </div>
 
-          <p v-if="errorMessage" class="text-red-500 text-sm mt-2">
-            {{ errorMessage }}
+          <p v-if="error" class="text-red-500 text-sm mt-2">
+            {{ error }}
           </p>
         </form>
       </div>

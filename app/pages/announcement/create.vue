@@ -1,22 +1,19 @@
 <script setup lang="ts">
 definePageMeta({
-  middleware: ['role'],
-  roles: [1]
+  middleware: ["role"],
+  roles: [1],
 })
 
-import { ref } from 'vue'
+import { ref } from "vue";
 import { useRouter } from 'vue-router'
-import { useNews } from '~/composables/useNews'
 
 const router = useRouter()
-const { create, loading } = useNews()
+const { create, loading } = useAnnouncements()
 
 const form = ref({
   date_post: new Date().toISOString().split('T')[0], // default hari ini
   title: '',
   content: '',
-  thumbnail: '',
-  image: '',
   status: 1
 })
 
@@ -35,20 +32,21 @@ const submit = async () => {
 
   try {
     await create(form.value as any)
-    router.push('/news')
+    router.push('/announcement')
   } catch (err) {
-    console.error('❌ Gagal membuat berita:', err)
-    formError.value = 'Gagal menyimpan berita. Coba lagi nanti.'
+    console.error('❌ Gagal membuat pengumuman:', err)
+    formError.value = 'Gagal menyimpan pengumuman. Coba lagi nanti.'
   } finally {
     saving.value = false
   }
 }
+
 </script>
 
 <template>
   <div class="p-6 w-full" style="color: var(--ui-text); background: var(--ui-bg)">
     <h1 class="text-2xl font-bold mb-6" style="color: var(--ui-text-highlighted)">
-      Tambah Berita Baru
+      Tambah Pengumuman Baru
     </h1>
 
     <UCard>
@@ -56,13 +54,13 @@ const submit = async () => {
         <!-- tanggal -->
         <div>
           <label class="block mb-1 font-medium">Tanggal Publikasi</label>
-          <UInput v-model="form.date_post" type="date" class="w-full"/>
+          <UInput v-model="form.date_post" type="date"  class="w-full"/>
         </div>
 
         <!-- judul -->
         <div>
-          <label class="block mb-1 font-medium">Judul Berita</label>
-          <UInput v-model="form.title" placeholder="Masukkan judul berita" class="w-full"/>
+          <label class="block mb-1 font-medium">Judul Pengumuman</label>
+          <UInput v-model="form.title" placeholder="Masukkan judul pengumuman" class="w-full"/>
         </div>
 
         <!-- konten -->
@@ -70,22 +68,10 @@ const submit = async () => {
           <label class="block mb-1 font-medium">Konten</label>
           <UTextarea
             v-model="form.content"
-            placeholder="Masukkan isi berita"
+            placeholder="Masukkan isi pengumuman"
             :rows="6"
             class="w-full"
           />
-        </div>
-
-        <!-- thumbnail -->
-        <div>
-          <label class="block mb-1 font-medium">Thumbnail URL</label>
-          <UInput v-model="form.thumbnail" placeholder="Opsional" class="w-full" />
-        </div>
-
-        <!-- image -->
-        <div>
-          <label class="block mb-1 font-medium">Image URL</label>
-          <UInput v-model="form.image" placeholder="Opsional" class="w-full" />
         </div>
 
         <!-- status -->
@@ -99,14 +85,14 @@ const submit = async () => {
             ]"
           />
         </div>
-
+        
         <!-- actions -->
         <div class="flex justify-end gap-3 pt-4">
           <UButton
             color="neutral"
             variant="soft"
             label="Batal"
-            @click="router.push('/news')"
+            @click="router.push('/announcement')"
           />
           <UButton
             type="submit"
