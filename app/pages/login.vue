@@ -1,178 +1,184 @@
 <script setup lang="ts">
 definePageMeta({
   ssr: false,
-  layout: 'auth'
-})
+  layout: "auth",
+});
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted } from "vue";
 
-import { useAuth } from '~/composables/useAuth'
-import { useNews } from '~/composables/useNews'
-import { useFormulirs } from '~/composables/useFormulirs'
+import { useAuth } from "~/composables/useAuth";
+import { useNews } from "~/composables/useNews";
+import { useFormulirs } from "~/composables/useFormulirs";
 
-const { login, requestPasswordReset, verifyOtp, resetPassword } = useAuth()
-const { create: createFormulir } = useFormulirs()
+const { login, requestPasswordReset, verifyOtp, resetPassword } = useAuth();
+const { create: createFormulir } = useFormulirs();
 
-const showForgotPassword = ref(false)
-const showRequestForm = ref(false)
+const showForgotPassword = ref(false);
+const showRequestForm = ref(false);
 
-const username = ref('')
-const password = ref('')
-const email = ref('')
-const message = ref('')
-const loading = ref(false)
-const error = ref('')
-const step = ref("email")
-const otp = ref('')
-const resetToken = ref('')
+const username = ref("");
+const password = ref("");
+const email = ref("");
+const message = ref("");
+const loading = ref(false);
+const error = ref("");
+const step = ref("email");
+const otp = ref("");
+const resetToken = ref("");
 
 // Request Form
-const requestEmail = ref('')
-const requestMessage = ref('')
-const requestLoading = ref(false)
-const requestError = ref('')
-const requestSuccess = ref('')
+const requestEmail = ref("");
+const requestMessage = ref("");
+const requestLoading = ref(false);
+const requestError = ref("");
+const requestSuccess = ref("");
 
-const { loginNews, fetchLoginNews } = useNews()
+const { loginNews, fetchLoginNews } = useNews();
 
 onMounted(() => {
-  fetchLoginNews()
-})
+  fetchLoginNews();
+});
 
 async function submitLogin() {
-  loading.value = true
-  error.value = ''
-  message.value = ''
+  loading.value = true;
+  error.value = "";
+  message.value = "";
 
   try {
-    const response = await login(username.value, password.value)
+    const response = (await login(username.value, password.value)) as any;
 
     // Cek apakah login berhasil atau gagal dari response status
-    if (response && response.status === false) {
+    if (response && "status" in response && response.status === false) {
       // Login gagal - tampilkan pesan error dari backend
-      error.value = response.message || 'Login gagal. Periksa username dan password Anda.'
-      loading.value = false
-      return
+      error.value =
+        response.message || "Login gagal. Periksa username dan password Anda.";
+      loading.value = false;
+      return;
     }
 
     // Login berhasil
-    await navigateTo('/')
-
+    await navigateTo("/");
   } catch (err: any) {
     // Ambil error message dari backend
     const msg =
       err?.response?._data?.message ||
       err?.data?.message ||
       err?.message ||
-      'Terjadi kesalahan, coba lagi.'
+      "Terjadi kesalahan, coba lagi.";
 
-    error.value = msg
+    error.value = msg;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function submitForgot() {
-  loading.value = true
-  message.value = ''
-  error.value = ''
+  loading.value = true;
+  message.value = "";
+  error.value = "";
 
   try {
-    const res = await requestPasswordReset(email.value)
+    const res = (await requestPasswordReset(email.value)) as any;
 
-    resetToken.value = res.token
+    resetToken.value = res.token;
 
-    step.value = "otp"
-    message.value = "Kode OTP telah dikirim ke email Anda."
+    step.value = "otp";
+    message.value = "Kode OTP telah dikirim ke email Anda.";
   } catch (err: any) {
-    error.value = err.message || 'Terjadi kesalahan'
+    error.value = err.message || "Terjadi kesalahan";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function submitOtp() {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
-    const res = await verifyOtp(resetToken.value, otp.value)
-    step.value = "reset"
-    message.value = "OTP berhasil diverifikasi!"
+    const res = await verifyOtp(resetToken.value, otp.value);
+    step.value = "reset";
+    message.value = "OTP berhasil diverifikasi!";
   } catch (err: any) {
-    error.value = err.message || 'OTP salah'
+    error.value = err.message || "OTP salah";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
-const newPassword = ref('')
-const confirmPassword = ref('')
+const newPassword = ref("");
+const confirmPassword = ref("");
 
 async function submitResetPassword() {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
     if (newPassword.value !== confirmPassword.value) {
-      error.value = "Password tidak sama!"
-      return
+      error.value = "Password tidak sama!";
+      return;
     }
 
-    await resetPassword(resetToken.value, otp.value, newPassword.value)
+    await resetPassword(resetToken.value, otp.value, newPassword.value);
 
-    message.value = "Password berhasil diganti! Silakan login."
-    showForgotPassword.value = false
-    step.value = "email"
+    message.value = "Password berhasil diganti! Silakan login.";
+    showForgotPassword.value = false;
+    step.value = "email";
     // Reset form
-    email.value = ''
-    otp.value = ''
-    newPassword.value = ''
-    confirmPassword.value = ''
-    resetToken.value = ''
+    email.value = "";
+    otp.value = "";
+    newPassword.value = "";
+    confirmPassword.value = "";
+    resetToken.value = "";
   } catch (err: any) {
-    error.value = err.message || 'Gagal mengganti password'
+    error.value = err.message || "Gagal mengganti password";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function submitRequestForm() {
-  requestLoading.value = true
-  requestError.value = ''
-  requestSuccess.value = ''
+  requestLoading.value = true;
+  requestError.value = "";
+  requestSuccess.value = "";
 
   try {
     await createFormulir({
       email_pengguna: requestEmail.value,
-      pesan: requestMessage.value
-    })
+      pesan: requestMessage.value,
+    });
 
-    requestSuccess.value = "Permintaan Anda berhasil dikirim! Kami akan segera menghubungi Anda."
+    requestSuccess.value =
+      "Permintaan Anda berhasil dikirim! Kami akan segera menghubungi Anda.";
 
     // Reset form after 2 seconds
     setTimeout(() => {
-      requestEmail.value = ''
-      requestMessage.value = ''
-      requestSuccess.value = ''
-      showRequestForm.value = false
-    }, 3000)
+      requestEmail.value = "";
+      requestMessage.value = "";
+      requestSuccess.value = "";
+      showRequestForm.value = false;
+    }, 3000);
   } catch (err: any) {
-    requestError.value = err.message || 'Gagal mengirim permintaan'
+    requestError.value = err.message || "Gagal mengirim permintaan";
   } finally {
-    requestLoading.value = false
+    requestLoading.value = false;
   }
 }
-
 </script>
 
 <template>
   <!-- Full screen with white background (changeable to image later) -->
-  <div class="min-h-screen w-full flex items-center justify-center bg-white relative p-4">
+  <div
+    class="min-h-screen w-full flex items-center justify-center bg-white relative p-4"
+  >
     <!-- Large container with black opacity background -->
-    <div class="w-full max-w-7xl bg-black/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 relative">
+    <div
+      class="w-full max-w-7xl bg-black/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 relative"
+    >
       <!-- Header: Logo on left, Navigation on right -->
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 sm:mb-12 gap-6 sm:gap-0">
+      <div
+        class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 sm:mb-12 gap-6 sm:gap-0"
+      >
         <!-- Logo -->
         <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-white">
           GKP AWILIGAR <span class="text-white">ERP</span>
@@ -180,19 +186,51 @@ async function submitRequestForm() {
 
         <!-- Navigation tabs - Hidden on mobile, visible on tablet+ -->
         <div class="hidden md:flex gap-6 lg:gap-12 text-base lg:text-xl">
-          <a href="#" class="text-white font-semibold border-b-2 border-white pb-2">Login</a>
-          <button @click="showRequestForm = true; showForgotPassword = false"
-            class="text-white hover:text-gray-300 transition">Formulir</button>
-          <a href="#" class="text-white hover:text-gray-300 transition">Bantuan</a>
-          <a href="https://gkpawiligar.org/contact/" class="text-white hover:text-gray-300 transition">Kontak</a>
+          <a
+            href="#"
+            class="text-white font-semibold border-b-2 border-white pb-2"
+            >Login</a
+          >
+          <button
+            @click="
+              showRequestForm = true;
+              showForgotPassword = false;
+            "
+            class="text-white hover:text-gray-300 transition"
+          >
+            Formulir
+          </button>
+          <a href="#" class="text-white hover:text-gray-300 transition"
+            >Bantuan</a
+          >
+          <a
+            href="https://gkpawiligar.org/contact/"
+            class="text-white hover:text-gray-300 transition"
+            >Kontak</a
+          >
         </div>
 
         <!-- Mobile Navigation Menu (Hamburger) -->
         <div class="flex md:hidden gap-4 text-sm">
-          <a href="#" class="text-white font-semibold border-b-2 border-white pb-1">Login</a>
-          <button @click="showRequestForm = true; showForgotPassword = false"
-            class="text-white hover:text-gray-300 transition">Form</button>
-          <a href="https://gkpawiligar.org/contact/" class="text-white hover:text-gray-300 transition">Kontak</a>
+          <a
+            href="#"
+            class="text-white font-semibold border-b-2 border-white pb-1"
+            >Login</a
+          >
+          <button
+            @click="
+              showRequestForm = true;
+              showForgotPassword = false;
+            "
+            class="text-white hover:text-gray-300 transition"
+          >
+            Form
+          </button>
+          <a
+            href="https://gkpawiligar.org/contact/"
+            class="text-white hover:text-gray-300 transition"
+            >Kontak</a
+          >
         </div>
       </div>
 
@@ -202,10 +240,13 @@ async function submitRequestForm() {
         <!-- News section -->
         <div v-if="loginNews" class="hidden lg:flex flex-1 flex-col">
           <p class="text-xs text-gray-400 mb-4">
-            Berita oleh admin · {{ new Date(loginNews.date_post).toLocaleString('id-ID') }}
+            Berita oleh admin ·
+            {{ new Date(loginNews.date_post).toLocaleString("id-ID") }}
           </p>
 
-          <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold text-cyan-400 mb-4">
+          <h2
+            class="text-2xl md:text-3xl lg:text-4xl font-bold text-cyan-400 mb-4"
+          >
             {{ loginNews.title }}
           </h2>
 
@@ -213,10 +254,23 @@ async function submitRequestForm() {
             {{ loginNews.content }}
           </p>
 
-          <a href="#" class="text-cyan-400 text-sm hover:underline flex items-center">
+          <a
+            href="#"
+            class="text-cyan-400 text-sm hover:underline flex items-center"
+          >
             Baca selengkapnya
-            <svg class="w-4 h-4 ml-1" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <svg
+              class="w-4 h-4 ml-1"
+              stroke="currentColor"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </a>
 
@@ -227,7 +281,10 @@ async function submitRequestForm() {
         </div>
 
         <!-- If no news -->
-        <div v-else class="hidden lg:flex flex-1 text-gray-400 justify-center items-center">
+        <div
+          v-else
+          class="hidden lg:flex flex-1 text-gray-400 justify-center items-center"
+        >
           Tidak ada berita ditampilkan di halaman login.
         </div>
 
@@ -235,43 +292,77 @@ async function submitRequestForm() {
         <!-- Right panel: Login / Forgot Password / Request Form -->
         <div class="w-full lg:max-w-sm mx-auto lg:mx-0">
           <div class="relative">
-            <div class="absolute -inset-1 bg-white/20 rounded-2xl blur-md"></div>
+            <div
+              class="absolute -inset-1 bg-white/20 rounded-2xl blur-md"
+            ></div>
 
-            <div class="relative bg-black rounded-2xl p-6 sm:p-8 shadow-2xl border border-gray-700/50">
-
+            <div
+              class="relative bg-black rounded-2xl p-6 sm:p-8 shadow-2xl border border-gray-700/50"
+            >
               <!-- ================= LOGIN FORM ================= -->
               <template v-if="!showForgotPassword && !showRequestForm">
-                <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Selamat Datang</h2>
-                <p class="text-gray-400 text-sm mb-6 sm:mb-8">Silakan masukkan username dan password Anda.</p>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">
+                  Selamat Datang
+                </h2>
+                <p class="text-gray-400 text-sm mb-6 sm:mb-8">
+                  Silakan masukkan username dan password Anda.
+                </p>
 
-                <div v-if="error" class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm">
+                <div
+                  v-if="error"
+                  class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm"
+                >
                   {{ error }}
                 </div>
 
-                <div v-if="message" class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm">
+                <div
+                  v-if="message"
+                  class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm"
+                >
                   {{ message }}
                 </div>
 
-                <form @submit.prevent="submitLogin" class="space-y-4 sm:space-y-5">
+                <form
+                  @submit.prevent="submitLogin"
+                  class="space-y-4 sm:space-y-5"
+                >
+                  <input
+                    v-model="username"
+                    type="text"
+                    placeholder="Username (email)"
+                    required
+                    class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
+                  />
 
-                  <input v-model="username" type="text" placeholder="Username (email)" required
-                    class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition" />
+                  <input
+                    v-model="password"
+                    type="password"
+                    placeholder="Password"
+                    required
+                    class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
+                  />
 
-                  <input v-model="password" type="password" placeholder="Password" required
-                    class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition" />
-
-                  <button type="submit" :disabled="loading"
-                    class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition">
-                    {{ loading ? 'Login...' : 'Login' }}
+                  <button
+                    type="submit"
+                    :disabled="loading"
+                    class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition"
+                  >
+                    {{ loading ? "Login..." : "Login" }}
                   </button>
 
                   <div class="flex justify-between text-xs sm:text-sm mt-4">
-                    <button type="button" @click="showForgotPassword = true"
-                      class="text-gray-400 hover:text-cyan-400 transition">
+                    <button
+                      type="button"
+                      @click="showForgotPassword = true"
+                      class="text-gray-400 hover:text-cyan-400 transition"
+                    >
                       Lupa password?
                     </button>
-                    <button type="button" @click="showRequestForm = true"
-                      class="text-gray-400 hover:text-cyan-400 transition">
+                    <button
+                      type="button"
+                      @click="showRequestForm = true"
+                      class="text-gray-400 hover:text-cyan-400 transition"
+                    >
                       Daftar Akun
                     </button>
                   </div>
@@ -279,107 +370,178 @@ async function submitRequestForm() {
               </template>
 
               <!-- Request Form Section -->
-      <template v-if="showRequestForm">
-        <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Permintaan Akun</h2>
-        <p class="text-gray-400 text-sm mb-6 sm:mb-8">
-          Kirimkan permintaan Anda dan kami akan menghubungi Anda segera.
-        </p>
+              <template v-if="showRequestForm">
+                <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">
+                  Permintaan Akun
+                </h2>
+                <p class="text-gray-400 text-sm mb-6 sm:mb-8">
+                  Kirimkan permintaan Anda dan kami akan menghubungi Anda
+                  segera.
+                </p>
 
-        <!-- Success & Error Messages -->
-        <div v-if="requestSuccess" class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm">
-          {{ requestSuccess }}
-        </div>
-        <div v-if="requestError" class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm">
-          {{ requestError }}
-        </div>
+                <!-- Success & Error Messages -->
+                <div
+                  v-if="requestSuccess"
+                  class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm"
+                >
+                  {{ requestSuccess }}
+                </div>
+                <div
+                  v-if="requestError"
+                  class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm"
+                >
+                  {{ requestError }}
+                </div>
 
-        <!-- Formulir -->
-        <form @submit.prevent="submitRequestForm" class="space-y-4 sm:space-y-5">
-          <input
-            v-model="requestEmail"
-            type="email"
-            placeholder="Email Anda"
-            required
-            class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
-          />
+                <!-- Formulir -->
+                <form
+                  @submit.prevent="submitRequestForm"
+                  class="space-y-4 sm:space-y-5"
+                >
+                  <input
+                    v-model="requestEmail"
+                    type="email"
+                    placeholder="Email Anda"
+                    required
+                    class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
+                  />
 
-          <textarea
-            v-model="requestMessage"
-            placeholder="Pesan / Keperluan Anda"
-            required
-            rows="4"
-            class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition resize-none"
-          ></textarea>
+                  <textarea
+                    v-model="requestMessage"
+                    placeholder="Pesan / Keperluan Anda"
+                    required
+                    rows="4"
+                    class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition resize-none"
+                  ></textarea>
 
-          <button
-            type="submit"
-            :disabled="requestLoading"
-            class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition"
-          >
-            {{ requestLoading ? 'Mengirim...' : 'Kirim Permintaan' }}
-          </button>
+                  <button
+                    type="submit"
+                    :disabled="requestLoading"
+                    class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition"
+                  >
+                    {{ requestLoading ? "Mengirim..." : "Kirim Permintaan" }}
+                  </button>
 
-          <p class="text-xs text-gray-500 text-center mt-3">
-            Kami akan menghubungi Anda melalui email dalam 1-2 hari kerja
-          </p>
-        </form>
+                  <p class="text-xs text-gray-500 text-center mt-3">
+                    Kami akan menghubungi Anda melalui email dalam 1-2 hari
+                    kerja
+                  </p>
+                </form>
 
-        <!-- Back Button -->
-        <button
-          type="button"
-          @click="showRequestForm = false; requestError = ''; requestSuccess = ''; requestEmail = ''; requestMessage = ''"
-          class="w-full mt-6 text-sm text-gray-400 hover:text-cyan-400 transition flex items-center justify-center gap-2"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Kembali ke Login
-        </button>
-      </template>
+                <!-- Back Button -->
+                <button
+                  type="button"
+                  @click="
+                    showRequestForm = false;
+                    requestError = '';
+                    requestSuccess = '';
+                    requestEmail = '';
+                    requestMessage = '';
+                  "
+                  class="w-full mt-6 text-sm text-gray-400 hover:text-cyan-400 transition flex items-center justify-center gap-2"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Kembali ke Login
+                </button>
+              </template>
 
               <!-- ================= FORGOT PASSWORD FORM ================= -->
               <template v-else-if="showForgotPassword">
-
                 <!-- STEP EMAIL -->
                 <template v-if="step === 'email'">
-                  <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Lupa Password</h2>
-                  <p class="text-gray-400 text-sm mb-6 sm:mb-8">Masukkan email Anda untuk menerima kode OTP.</p>
+                  <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">
+                    Lupa Password
+                  </h2>
+                  <p class="text-gray-400 text-sm mb-6 sm:mb-8">
+                    Masukkan email Anda untuk menerima kode OTP.
+                  </p>
 
-                  <div v-if="message" class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm">
+                  <div
+                    v-if="message"
+                    class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm"
+                  >
                     {{ message }}
                   </div>
-                  <div v-if="error" class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm">
+                  <div
+                    v-if="error"
+                    class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm"
+                  >
                     {{ error }}
                   </div>
 
-                  <form @submit.prevent="submitForgot" class="space-y-4 sm:space-y-5">
-                    <input v-model="email" type="email" placeholder="Email" required
-                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition" />
-                    <button type="submit" :disabled="loading"
-                      class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition">
-                      {{ loading ? 'Mengirim...' : 'Kirim OTP' }}
+                  <form
+                    @submit.prevent="submitForgot"
+                    class="space-y-4 sm:space-y-5"
+                  >
+                    <input
+                      v-model="email"
+                      type="email"
+                      placeholder="Email"
+                      required
+                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
+                    />
+                    <button
+                      type="submit"
+                      :disabled="loading"
+                      class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition"
+                    >
+                      {{ loading ? "Mengirim..." : "Kirim OTP" }}
                     </button>
                   </form>
                 </template>
 
                 <!-- STEP OTP -->
                 <template v-else-if="step === 'otp'">
-                  <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Verifikasi OTP</h2>
-                  <p class="text-gray-400 text-sm mb-6 sm:mb-8">Masukkan kode OTP yang dikirim ke email Anda.</p>
+                  <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">
+                    Verifikasi OTP
+                  </h2>
+                  <p class="text-gray-400 text-sm mb-6 sm:mb-8">
+                    Masukkan kode OTP yang dikirim ke email Anda.
+                  </p>
 
-                  <div v-if="message" class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm">
+                  <div
+                    v-if="message"
+                    class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm"
+                  >
                     {{ message }}
                   </div>
-                  <div v-if="error" class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm">
+                  <div
+                    v-if="error"
+                    class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm"
+                  >
                     {{ error }}
                   </div>
 
-                  <form @submit.prevent="submitOtp" class="space-y-4 sm:space-y-5">
-                    <input v-model="otp" type="text" placeholder="Kode OTP (6 digit)" required maxlength="6"
-                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 text-center text-2xl font-mono tracking-widest focus:outline-none focus:border-cyan-500 transition" />
-                    <button type="submit" :disabled="loading"
-                      class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition">
-                      {{ loading ? 'Memeriksa...' : 'Verifikasi OTP' }}
+                  <form
+                    @submit.prevent="submitOtp"
+                    class="space-y-4 sm:space-y-5"
+                  >
+                    <input
+                      v-model="otp"
+                      type="text"
+                      placeholder="Kode OTP (6 digit)"
+                      required
+                      maxlength="6"
+                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 text-center text-2xl font-mono tracking-widest focus:outline-none focus:border-cyan-500 transition"
+                    />
+                    <button
+                      type="submit"
+                      :disabled="loading"
+                      class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition"
+                    >
+                      {{ loading ? "Memeriksa..." : "Verifikasi OTP" }}
                     </button>
                     <p class="text-xs text-gray-500 text-center mt-3">
                       Kode OTP berlaku selama 10 menit
@@ -389,24 +551,50 @@ async function submitRequestForm() {
 
                 <!-- STEP RESET PASSWORD -->
                 <template v-else-if="step === 'reset'">
-                  <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Ubah Password</h2>
-                  <p class="text-gray-400 text-sm mb-6 sm:mb-8">Buat password baru untuk akun Anda.</p>
+                  <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">
+                    Ubah Password
+                  </h2>
+                  <p class="text-gray-400 text-sm mb-6 sm:mb-8">
+                    Buat password baru untuk akun Anda.
+                  </p>
 
-                  <div v-if="message" class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm">
+                  <div
+                    v-if="message"
+                    class="p-3 bg-green-900/50 border border-green-500 text-green-200 rounded mb-4 text-sm"
+                  >
                     {{ message }}
                   </div>
-                  <div v-if="error" class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm">
+                  <div
+                    v-if="error"
+                    class="p-3 bg-red-900/50 border border-red-500 text-red-200 rounded mb-4 text-sm"
+                  >
                     {{ error }}
                   </div>
 
-                  <form @submit.prevent="submitResetPassword" class="space-y-4 sm:space-y-5">
-                    <input v-model="newPassword" type="password" placeholder="Password Baru" required
-                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition" />
-                    <input v-model="confirmPassword" type="password" placeholder="Konfirmasi Password" required
-                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition" />
-                    <button type="submit" :disabled="loading"
-                      class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition">
-                      {{ loading ? 'Menyimpan...' : 'Ganti Password' }}
+                  <form
+                    @submit.prevent="submitResetPassword"
+                    class="space-y-4 sm:space-y-5"
+                  >
+                    <input
+                      v-model="newPassword"
+                      type="password"
+                      placeholder="Password Baru"
+                      required
+                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
+                    />
+                    <input
+                      v-model="confirmPassword"
+                      type="password"
+                      placeholder="Konfirmasi Password"
+                      required
+                      class="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 transition"
+                    />
+                    <button
+                      type="submit"
+                      :disabled="loading"
+                      class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold disabled:opacity-50 transition"
+                    >
+                      {{ loading ? "Menyimpan..." : "Ganti Password" }}
                     </button>
                     <p class="text-xs text-gray-500 text-center mt-3">
                       Password minimal 8 karakter
@@ -415,16 +603,32 @@ async function submitRequestForm() {
                 </template>
 
                 <!-- BUTTON BACK -->
-                <button type="button" @click="showForgotPassword = false; step = 'email'; error = ''; message = ''"
-                  class="w-full mt-6 text-sm text-gray-400 hover:text-cyan-400 transition flex items-center justify-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                <button
+                  type="button"
+                  @click="
+                    showForgotPassword = false;
+                    step = 'email';
+                    error = '';
+                    message = '';
+                  "
+                  class="w-full mt-6 text-sm text-gray-400 hover:text-cyan-400 transition flex items-center justify-center gap-2"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 19l-7-7 7-7"
+                    />
                   </svg>
                   Kembali ke Login
                 </button>
-
               </template>
-
             </div>
           </div>
         </div>
@@ -436,7 +640,7 @@ async function submitRequestForm() {
 <style scoped>
 /* Add background image later by uncommenting and adding image URL */
 .bg-white {
-  background-image: url('/pages/background.png');
+  background-image: url("/pages/background.png");
   background-size: cover;
   background-position: center;
 }
@@ -451,7 +655,6 @@ async function submitRequestForm() {
 
 /* Additional mobile optimizations */
 @media (max-width: 640px) {
-
   /* Reduce padding on very small screens */
   .bg-black\/60 {
     max-height: 95vh;

@@ -1,30 +1,27 @@
 <script setup lang="ts">
-definePageMeta({
+  definePageMeta({
   middleware: ["role"],
   roles: [1],
-});
+})
 
 import { onMounted } from "vue";
-import { useNews } from "~/composables/useNews";
+import { useReflections  } from "~/composables/useReflections";
 
-const { news, fetchAll, update, remove, loading, error } = useNews();
+const { reflections, fetchAll, remove, loading, error } = useReflections()
 
-// Ambil data pas mount
-onMounted(fetchAll);
+onMounted(fetchAll)
 
-// Fungsi hapus
 const handleDelete = async (id: number) => {
-  if (!confirm("Apakah kamu yakin ingin menghapus berita ini?")) return
+  if (!confirm("Apakah kamu yakin ingin menghapus renungan ini?")) return;
   try {
     await remove(id);
     await fetchAll();
   } catch (err) {
-    console.error("❌ Gagal hapus berita:", err);
-    alert("Gagal menghapus berita");
+    console.error("❌ Gagal hapus renungan:", err);
+    alert("Gagal menghapus renungan");
   }
 };
 
-// Format tanggal biar rapi
 const formatDate = (date: string) => {
   if (!date) return "-";
   try {
@@ -38,17 +35,6 @@ const formatDate = (date: string) => {
   }
 };
 
-const toggleShowOnLogin = async (item: any) => {
-  const newValue = item.show_on_login ? 0 : 1;
-
-  try {
-    await update(item.id, { show_on_login: newValue });
-    item.show_on_login = newValue;
-  } catch (err) {
-    console.error("Gagal update show_on_login:", err);
-    alert("Gagal mengubah status show_on_login");
-  }
-};
 </script>
 
 <template>
@@ -59,30 +45,27 @@ const toggleShowOnLogin = async (item: any) => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted)">
-        Daftar Berita
+        Daftar Renungan
       </h1>
       <UButton
-        to="/news/create"
+        to="/reflection/create"
         icon="i-heroicons-plus-circle"
         size="md"
         color="primary"
-        label="Tambah Berita"
+        label="Tambah Renungan"
       />
     </div>
 
     <!-- Loading & Error -->
     <div v-if="loading" class="text-center py-6 text-gray-500">
-      Memuat data berita...
+      Memuat data renungan...
     </div>
     <div v-else-if="error" class="text-center py-6 text-red-500">
       {{ error }}
     </div>
 
     <!-- Table -->
-    <UCard
-      v-else
-      class="relative z-0 overflow-hidden"
-    >
+    <UCard v-else class="relative z-0 overflow-hidden">
       <div class="overflow-x-auto w-full">
         <table class="min-w-full table-auto border-collapse">
           <thead>
@@ -112,14 +95,12 @@ const toggleShowOnLogin = async (item: any) => {
               >
                 Aksi
               </th>
-              <th class="px-3 py-3 text-xs">Show Login</th>
             </tr>
           </thead>
 
           <tbody>
             <tr
-              v-for="item in news"
-              :key="item.id"
+              v-for="item in reflections"
               class="transition-colors hover:bg-gray-50/5 border-b border-gray-700/10"
             >
               <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">
@@ -139,7 +120,7 @@ const toggleShowOnLogin = async (item: any) => {
               <td class="px-3 py-3 text-sm whitespace-nowrap text-center">
                 <div class="flex justify-center gap-2">
                   <UButton
-                    :to="`/news/${item.id}`"
+                    :to="`/reflection/${item.id}`"
                     icon="i-heroicons-pencil-square"
                     size="xs"
                     color="info"
@@ -156,27 +137,14 @@ const toggleShowOnLogin = async (item: any) => {
                   />
                 </div>
               </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <button
-                  @click="toggleShowOnLogin(item)"
-                  class="px-3 py-1 rounded text-white text-xs font-semibold"
-                  :class="
-                    item.show_on_login
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gray-500 hover:bg-gray-600'
-                  "
-                >
-                  {{ item.show_on_login ? "Ya" : "Tidak" }}
-                </button>
-              </td>
             </tr>
 
-            <tr v-if="!news.length">
+            <tr v-if="!reflections.length">
               <td
                 colspan="5"
                 class="px-3 py-4 text-center text-gray-500 text-sm italic"
               >
-                Tidak ada berita ditemukan.
+                Tidak ada renungan ditemukan.
               </td>
             </tr>
           </tbody>

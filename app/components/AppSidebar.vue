@@ -90,6 +90,8 @@ const allLinks: NavigationMenuItem[] = [
   { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
   { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
   { label: 'News', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
+  { label: 'Announcement', icon: 'i-lucide-megaphone', to: '/announcement', roles: [1] },
+  { label: 'Reflection', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1] },
   { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
   { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
   { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
