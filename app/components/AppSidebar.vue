@@ -16,7 +16,7 @@ const isOpen = computed({
 })
 
 const { user } = useAuth()
-console.log("USER:", user.value)
+// console.log("USER:", user.value)
 
 const organizationId = computed(() => {
   return user.value?.role?.organization_id

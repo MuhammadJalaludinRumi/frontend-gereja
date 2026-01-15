@@ -53,6 +53,7 @@ const submit = async () => {
       date_post: form.value.date_post?.replace("T", " ") || ""
     });
 
+    router.push('/announcement')
   } catch (err) {
     console.error("❌ Gagal update pengumuman:", err);
     error.value = "Gagal memperbarui pengumuman.";

@@ -55,6 +55,8 @@ const submit = async () => {
       ...form.value,
       date_post: form.value.date_post?.replace("T", " ") || "",
     });
+
+    router.push('/reflection')
   } catch (err) {
     console.error("❌ Gagal update renungan:", err);
     error.value = "Gagal memperbarui renungan.";
