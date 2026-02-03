@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  definePageMeta({
+definePageMeta({
   middleware: ["role"],
   roles: [1],
 })

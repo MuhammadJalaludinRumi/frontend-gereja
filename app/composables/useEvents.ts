@@ -2,21 +2,57 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
-export interface Reflection {
-  id?: number
-  date_post: string
-  title: string
-  content: string
-  image: string
-  status: number
+export interface Member {
+  id: number
+  name: string
 }
 
-export const useReflections = () => {
+export interface Organization {
+  id: number
+  name: string
+}
+
+export interface Event {
+  id: number
+
+  service_type: string
+  service_date: string
+  service_time: string
+
+  service_ministry: Member
+  organization: Organization
+
+  scripture_reading: string
+  sermon_text: string
+  sermon_theme: string
+
+  coordinator: Member | null
+  liturgist: Member | null
+  pf_assistant: Member | null
+
+  musician: Member[]
+  worship_leader: Member[]
+  offering_officer: Member[]
+  choir: Member[]
+
+  male_attendance: number
+  female_attendance: number
+  total_attendance: number
+
+  red_envelope: number
+  blue_envelope: number
+  other_envelope: number
+  total_envelope: number
+
+  note: string | null
+}
+
+export const useEvent = () => {
   const apiBase = useApiUrl()
   const config = useRuntimeConfig()
 
-  const reflections = ref<Reflection[]>([])
-  const currentReflection = ref<Reflection | null>(null)
+  const events = ref<Event[]>([])
+  const currentEvent = ref<Event | null>(null)
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -44,45 +80,45 @@ export const useReflections = () => {
     loading.value = true
 
     try {
-      reflections.value = await $fetch<Reflection[]>(`${apiBase}/reflections`, {
+      events.value = await $fetch<Event[]>(`${apiBase}/events`, {
         headers: getHeaders(false),
         credentials: 'include'
       })
     } catch (e) {
       console.error('❌ fetchAll:', e)
-      error.value = 'Gagal memuat renungan'
+      error.value = 'Gagal memuat agenda'
     } finally {
       loading.value = false
     }
   }
 
-  const fetchById = async ( id: number ) => {
+  const fetchById = async (id: number) => {
     loading.value = true
 
     try {
-      currentReflection.value = await $fetch<Reflection>(`${apiBase}/reflections/${id}`, {
-        headers: getHeaders(),
+      currentEvent.value = await $fetch<Event>(`${apiBase}/events/${id}`, {
+        headers: getHeaders(false),
         credentials: 'include'
       })
     } catch (e) {
       console.error('❌ fetchById:', e)
-      error.value = 'Gagal memuat detail renungan'
+      error.value = 'Gagal memuat agenda'
     } finally {
       loading.value = false
     }
   }
 
-  const create = async ( payload: Reflection ) => {
-    return await $fetch(`${apiBase}/reflections`, {
+  const create = async ( payload: Event ) => {
+    return await $fetch(`${apiBase}/events`, {
       method: 'POST',
       headers: getHeaders(),
       credentials: 'include',
       body: payload
-    });
+    })
   }
 
-  const update = async (id: number, payload: Partial<Reflection>) => {
-    return await $fetch(`${apiBase}/reflections/${id}`, {
+  const update = async (id: number, payload: Event) => {
+    return await $fetch(`${apiBase}/events/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
       credentials: 'include',
@@ -91,7 +127,7 @@ export const useReflections = () => {
   }
 
   const remove = async (id: number) => {
-    return await $fetch(`${apiBase}/reflections/${id}`, {
+    return await $fetch(`${apiBase}/events/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
       credentials: 'include'
@@ -99,13 +135,11 @@ export const useReflections = () => {
   }
 
   return {
-    // state
-    reflections,
-    currentReflection,
+    events,
+    currentEvent,
     loading,
     error,
-    
-    // protected
+
     fetchAll,
     fetchById,
     create,
