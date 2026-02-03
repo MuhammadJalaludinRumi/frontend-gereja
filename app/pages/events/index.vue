@@ -57,7 +57,7 @@ const handleDelete = async (id: number) => {
 
     <!-- Loading & Error -->
     <div v-if="loading" class="text-center py-6 text-gray-500">
-      Memuat data renungan...
+      Memuat data agenda...
     </div>
     <div v-else-if="error" class="text-center py-6 text-red-500">
       {{ error }}
@@ -302,7 +302,7 @@ const handleDelete = async (id: number) => {
                 colspan="5"
                 class="px-3 py-4 text-center text-gray-500 text-sm italic"
               >
-                Tidak ada renungan ditemukan.
+                Tidak ada agenda ditemukan.
               </td>
             </tr>
           </tbody>
