@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({
   middleware: ["role"],
-  roles: [1],
+  roles: [1, 4],
 })
 
 import { ref, onMounted, watch } from "vue";

@@ -64,7 +64,12 @@ const allLinks: NavigationMenuItem[] = [
     ]
   },
 
-  { label: 'Announcement', icon: 'i-lucide-megaphone', to: '/announcement', roles: [1] },
+  { 
+    label: 'Announcement', 
+    icon: 'i-lucide-megaphone', 
+    to: '/announcement', 
+    roles: [1, 4] 
+  },
 
   // =======================
   // ASSET MANAGEMENT (DROPDOWN) - UPDATED
@@ -102,7 +107,7 @@ const allLinks: NavigationMenuItem[] = [
   { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
   { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
   { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
-  { label: 'Reflection', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1] },
+  { label: 'Reflection', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1, 4] },
   { label: 'User Authorities', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
   { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
   { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] }
