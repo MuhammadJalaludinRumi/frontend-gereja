@@ -61,9 +61,10 @@ function findOptions(
 }
 
 onMounted( async () => {
-  fetchAll()
-
   const id = Number(route.params.id)
+  
+  await fetchAll()
+  
   if (id) await fetchById(id)
 })
 
