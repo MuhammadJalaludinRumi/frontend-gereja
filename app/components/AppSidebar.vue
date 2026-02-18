@@ -25,7 +25,7 @@ const organizationId = computed(() => {
 const allLinks: NavigationMenuItem[] = [
   // HOME
   {
-    label: 'Home',
+    label: 'Beranda',
     icon: 'i-lucide-house',
     to: '/',
     roles: [1, 4]
@@ -35,14 +35,14 @@ const allLinks: NavigationMenuItem[] = [
   // MEMBER DATA (DROPDOWN)
   // =======================
   {
-    label: 'Member Data',
+    label: 'Data Anggota',
     icon: 'i-lucide-users',
     children: [
-      { label: 'Members', to: '/members', roles: [4] },
-      { label: 'Marriages', to: '/marriages', roles: [4] },
-      { label: 'Economy', to: '/economy', roles: [4] },
-      { label: 'Educations', to: '/educations', roles: [4] },
-      { label: 'Occupations', to: '/occupations', roles: [4] }
+      { label: 'Anggota', to: '/members', roles: [4] },
+      { label: 'Pernikahan', to: '/marriages', roles: [4] },
+      { label: 'Ekonomi', to: '/economy', roles: [4] },
+      { label: 'Pendidikan', to: '/educations', roles: [4] },
+      { label: 'Pekerjaan', to: '/occupations', roles: [4] }
     ]
   },
 
@@ -50,14 +50,14 @@ const allLinks: NavigationMenuItem[] = [
   // ADMINISTRATION (DROPDOWN)
   // =======================
   {
-    label: 'Administration',
+    label: 'Administrasi',
     icon: 'i-lucide-shield-check',
     children: [
       { label: 'Acls', to: '/acls', roles: [1, 4] },
-      { label: 'Role Management', to: '/roles', roles: [1, 4] },
+      { label: 'Manajemen Role', to: '/roles', roles: [1, 4] },
       { label: 'Rules', to: '/rules', roles: [1, 4] },
       {
-        label: 'Organization',
+        label: 'Organisasi',
         to: () => `/organizations/${organizationId.value}`,
         roles: [4]
       }
@@ -65,7 +65,7 @@ const allLinks: NavigationMenuItem[] = [
   },
 
   { 
-    label: 'Announcement', 
+    label: 'Pengumuman', 
     icon: 'i-lucide-megaphone', 
     to: '/announcement', 
     roles: [1, 4] 
@@ -75,23 +75,23 @@ const allLinks: NavigationMenuItem[] = [
   // ASSET MANAGEMENT (DROPDOWN) - UPDATED
   // =======================
   {
-    label: 'Asset Management',
+    label: 'Manajemen Aset',
     icon: 'i-lucide-package',
     children: [
-      { label: 'Assets', to: '/assets', roles: [4] },
-      { label: 'Asset Category', to: '/asset-categories', roles: [4] },
-      { label: 'Locations', to: '/locations', roles: [1, 4] },
-      { label: 'Asset Images', to: '/asset-images', roles: [1, 4] },
-      { label: 'Asset Loans', to: '/asset-loans', roles: [1, 4] },
-      { label: 'Asset Maintenances', to: '/asset-maintenances', roles: [1, 4] },
-      { label: 'Asset Movements', to: '/asset-movements', roles: [1, 4] },
-      { label: 'Asset Disposals', to: '/asset-disposals', roles: [1, 4] },
-      { label: 'Asset Documents', to: '/asset-documents', roles: [1, 4] }
+      { label: 'Aset', to: '/assets', roles: [4] },
+      { label: 'Kategori Aset', to: '/asset-categories', roles: [4] },
+      { label: 'Lokasi', to: '/locations', roles: [1, 4] },
+      { label: 'Gambar Aset', to: '/asset-images', roles: [1, 4] },
+      { label: 'Peminjaman Aset', to: '/asset-loans', roles: [1, 4] },
+      { label: 'Pemeliharaan Aset', to: '/asset-maintenances', roles: [1, 4] },
+      { label: 'Perpindahan Aset', to: '/asset-movements', roles: [1, 4] },
+      { label: 'Penghapusan Aset', to: '/asset-disposals', roles: [1, 4] },
+      { label: 'Dokumen Aset', to: '/asset-documents', roles: [1, 4] }
     ]
   },
 
   {
-    label: 'Event',
+    label: 'Agenda',
     icon: 'i-lucide-calendar-check',
     to: '/events',
     roles: [4]
@@ -100,16 +100,16 @@ const allLinks: NavigationMenuItem[] = [
   // =======================
   // ADMIN LIST (NO DROPDOWN)
   // =======================
-  { label: 'City', icon: 'i-lucide-map-pin', to: '/city', roles: [1] },
+  { label: 'Kota', icon: 'i-lucide-map-pin', to: '/city', roles: [1] },
   { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
-  { label: 'License', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
-  { label: 'News', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
-  { label: 'Organization License', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
-  { label: 'Organizations', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
-  { label: 'Provinces', icon: 'i-lucide-map', to: '/province', roles: [1] },
-  { label: 'Reflection', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1, 4] },
-  { label: 'User Authorities', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
-  { label: 'User Management', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
+  { label: 'Lisensi', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
+  { label: 'Berita', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
+  { label: 'Lisensi Organisasi', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
+  { label: 'Organisasi', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
+  { label: 'Provinsi', icon: 'i-lucide-map', to: '/province', roles: [1] },
+  { label: 'Renungan', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1, 4] },
+  { label: 'Otoritas User', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
+  { label: 'Manajemen User', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
   { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] }
 ]
 
