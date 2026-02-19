@@ -2,15 +2,15 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
-export interface Member {
-  id: number
-  name: string
-}
+// export interface Member {
+//   id: number
+//   name: string
+// }
 
-export interface Organization {
-  id: number
-  name: string
-}
+// export interface Organization {
+//   id: number
+//   name: string
+// }
 
 export interface Event {
   id: number
