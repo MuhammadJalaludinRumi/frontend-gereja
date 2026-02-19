@@ -11,19 +11,6 @@ const { events, fetchAll, remove, loading, error } = useEvent()
 
 onMounted(fetchAll)
 
-const formatDate = (date: string) => {
-  if (!date) return "-";
-  try {
-    return new Date(date).toLocaleDateString("id-ID", {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  } catch {
-    return date.split("T")[0];
-  }
-}
-
 const handleDelete = async (id: number) => {
   if (!confirm("Apakah kamu yakin ingin menghapus agenda ini?")) return;
   try {
@@ -209,7 +196,7 @@ const handleDelete = async (id: number) => {
                 {{ item.service_type }}
               </td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">
-                {{ formatDate(item.service_date) }}
+                {{ $formatDate(item.service_date) }}
               </td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">
                 {{ item.service_time }}

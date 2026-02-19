@@ -77,11 +77,6 @@ const memberOptions = computed<{ label: string; value: number }[]>(() =>
     }))
 )
 
-function formatDateForInput(dateString?: string | null) {
-  if (!dateString) return ''
-  return dateString.slice(0, 10)
-}
-
 function normalizeTime(time: string | undefined): string {
   if (!time) return ''
   return time.slice(0, 5)
@@ -168,7 +163,7 @@ watch(currentEvent, (event) => {
 
   form.value = {
     service_type: event.service_type,
-    service_date: formatDateForInput(event.service_date),
+    service_date: $formatDateForInput(event.service_date),
     service_time: event.service_time,
 
     // SINGLE SELECT

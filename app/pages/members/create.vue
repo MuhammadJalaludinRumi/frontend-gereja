@@ -4,7 +4,7 @@
       <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">
         Tambah Data Anggota
       </h1>
-      <UButton to="/members" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Back" />
+      <UButton to="/members" icon="i-heroicons-arrow-left" color="neutral" variant="link" label="Kembali" />
     </div>
 
     <div v-if="loading" class="mb-4 text-sm text-gray-400">Loading...</div>
@@ -420,16 +420,16 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex items-center gap-3 pt-2">
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" label="Batal"
+            @click="router.push('/members')" />
           <UButton type="submit" :loading="saving" :disabled="saving" color="primary" icon="i-heroicons-check-circle"
             :label="saving ? 'Menyimpan...' : 'Simpan Data Anggota'" />
-          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Batal"
-            @click="router.push('/members')" />
         </div>
       </form>
     </UCard>
 
-    <UCard class="mt-6" :ui="{ body: { padding: 'p-4' } }">
+    <UCard class="mt-6">
       <div class="flex items-start gap-3">
         <span class="text-blue-400 text-lg">ℹ️</span>
         <div class="text-sm">

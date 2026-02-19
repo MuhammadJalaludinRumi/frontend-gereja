@@ -6,14 +6,6 @@ import { useCookie, useRuntimeConfig } from '#app'
  * TYPES
  * ======================= */
 
-export interface AssetDisposal {
-  id: number
-  disposal_date: string
-  disposal_type: 'dijual' | 'rusak' | 'hilang'
-  value?: number
-  notes?: string
-}
-
 export interface Asset {
   id?: number
   asset_code: string
