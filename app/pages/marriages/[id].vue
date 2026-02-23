@@ -8,6 +8,7 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMembers } from '~/composables/useMembers'
 import { useMarriages } from '~/composables/useMarriages'
+import { f } from 'vue-router/dist/router-CWoNjPRp.mjs'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,55 +20,54 @@ const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
+const isBrideMember = ref(true);
+const isGroomMember = ref(true);
+const isPriestMember = ref(true);
+
 const form = reactive({
-  bride: null as number | null,
+  bride: { label: '', value: 0 },
   bride_name: '',
-  groom: null as number | null,
+  groom: { label: '', value: 0 },
   groom_name: '',
   date: '',
   venue: '',
-  priest: null as number | null,
+  priest: { label: '', value: 0 },
   priest_name: '',
   is_active: 1,
 })
-
-const onBrideChange = (e: Event) => {
-  const id = Number((e.target as HTMLSelectElement).value) || null
-  form.bride = id
-  form.bride_name = id ? members.value.find(x => x.id === id)?.name || '' : ''
-}
-
-const onGroomChange = (e: Event) => {
-  const id = Number((e.target as HTMLSelectElement).value) || null
-  form.groom = id
-  form.groom_name = id ? members.value.find(x => x.id === id)?.name || '' : ''
-}
-
-const onPriestChange = (e: Event) => {
-  const id = Number((e.target as HTMLSelectElement).value) || null
-  form.priest = id
-  form.priest_name = id ? members.value.find(x => x.id === id)?.name || '' : ''
-}
 
 // Load members & marriage detail
 const loadData = async () => {
   loading.value = true
   serverError.value = null
+
   try {
     await fetchMembers()
     const id = Number(route.params.id)
     await fetchById(id)
     if (marriage.value) {
-      form.bride = marriage.value.bride ?? null
+      form.bride.value = marriage.value.bride ?? 0
+      form.bride.label = members.value.find(m => m.id === marriage.value?.bride)?.name || ''
       form.bride_name = marriage.value.bride_name
-      form.groom = marriage.value.groom ?? null
+      
+      form.groom.value = marriage.value.groom ?? 0
+      form.groom.label = members.value.find(m => m.id === marriage.value?.groom)?.name || ''
       form.groom_name = marriage.value.groom_name
-      form.priest = marriage.value.priest ?? null
+
+      form.priest.value = marriage.value.priest ?? 0
       form.priest_name = marriage.value.priest_name
-      form.date = marriage.value.date
+      form.priest.label = members.value.find(m => m.id === marriage.value?.priest)?.name || ''
+
+      form.date = $formatDateForInput(marriage.value.date)
       form.venue = marriage.value.venue ?? ''
-      form.is_active = marriage.value.is_active ?? 1
+      form.is_active = Number(marriage.value.is_active) ?? 1
+
+      console.log('Form', form)
     }
+
+    isBrideMember.value = !!marriage.value?.bride
+    isGroomMember.value = !!marriage.value?.groom
+    isPriestMember.value = !!marriage.value?.priest
   } catch (err) {
     console.error('Gagal load data marriage:', err)
     serverError.value = 'Gagal load data marriage.'
@@ -75,6 +75,15 @@ const loadData = async () => {
     loading.value = false
   }
 }
+
+const memberOptions = computed<{ label: string; value: number }[]>(() =>
+  members.value
+    .filter(m => typeof m.id === 'number')
+    .map(m => ({
+      label: m.name,
+      value: m.id!
+    }))
+)
 
 onMounted(loadData)
 
@@ -87,11 +96,6 @@ const save = async () => {
     return
   }
 
-  // Pastikan nama terisi
-  if (form.bride) form.bride_name = members.value.find(x => x.id === form.bride)?.name || form.bride_name
-  if (form.groom) form.groom_name = members.value.find(x => x.id === form.groom)?.name || form.groom_name
-  if (form.priest) form.priest_name = members.value.find(x => x.id === form.priest)?.name || form.priest_name
-
   if (!form.bride_name.trim() || !form.groom_name.trim() || !form.priest_name.trim()) {
     serverError.value = 'Nama pengantin & pelayan wajib diisi.'
     return
@@ -100,11 +104,11 @@ const save = async () => {
   saving.value = true
   try {
     const payload = {
-      bride: form.bride || null,
+      bride: form.bride.value || null,
       bride_name: form.bride_name.trim(),
-      groom: form.groom || null,
+      groom: form.groom.value || null,
       groom_name: form.groom_name.trim(),
-      priest: form.priest || null,
+      priest: form.priest.value || null,
       priest_name: form.priest_name.trim(),
       date: form.date,
       venue: form.venue,
@@ -127,66 +131,179 @@ const save = async () => {
       <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted)">
         Edit Pernikahan
       </h1>
-      <UButton to="/marriages" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Kembali" />
+      <UButton to="/marriages" icon="i-heroicons-arrow-left" color="neutral" variant="link" label="Kembali" />
     </div>
 
     <div v-if="loading" class="text-sm opacity-70 mb-4">Loading data...</div>
 
-    <UCard v-else :ui="{ body: { padding: 'p-6' } }">
+    <UCard v-else >
       <form @submit.prevent="save" class="space-y-6">
-        <!-- Bride -->
-        <div>
-          <label class="font-semibold text-sm mb-2 block">Istri</label>
-          <select :value="form.bride || ''" @change="onBrideChange" class="w-full px-3 py-2 text-sm rounded-lg">
-            <option value="">Pilih anggota (kalau istri anggota)</option>
-            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-          <input v-model="form.bride_name" type="text" placeholder="Nama istri jika orang luar"
-            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Bride -->
+          <div>
+            <label class="font-medium text-sm mb-2 block">
+              Istri
+              <span :hidden="isBrideMember">(Bukan Anggota)</span>
+            </label>
+            <div v-if="isBrideMember" class="flex gap-2 items-center">
+              <UInputMenu
+                v-model="form.bride"
+                :items="memberOptions"
+                :loading="loading"
+                @change="form.bride_name = form.bride.label"
+                placeholder="Pilih anggota (kalau istri anggota)"
+                class="w-full"
+              />
 
-        <!-- Groom -->
-        <div>
-          <label class="font-semibold text-sm mb-2 block">Suami</label>
-          <select :value="form.groom || ''" @change="onGroomChange" class="w-full px-3 py-2 text-sm rounded-lg">
-            <option value="">Pilih anggota (kalau suami anggota)</option>
-            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-          <input v-model="form.groom_name" type="text" placeholder="Nama suami jika orang luar"
-            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+              <UButton
+                type="button"
+                color="primary"
+                variant="outline"
+                @click="form.bride = { label: '', value: 0 }; form.bride_name = ''; isBrideMember = false"
+                label="Anggota"
+              />
+            </div>
+            <div v-else class="flex gap-2">
+              <UInput
+                v-model="form.bride_name"
+                type="text"
+                class="w-full"
+                placeholder="Nama istri jika orang luar"
+              />
+              <UButton
+                type="button"
+                color="primary"
+                variant="outline"
+                @click="form.bride = { label: marriage?.bride_name || '', value: marriage?.bride || 0 }; form.bride_name = ''; isBrideMember = true"
+                label="Bukan Anggota"
+              />
+            </div>
+            <div class="text-end w-full text-sm italic mt-1">
+              <small>Click tombol untuk memilih anggota atau bukan anggota</small>
+            </div>
+          </div>
+
+          <!-- Groom -->
+          <div>
+            <label class="font-medium text-sm mb-2 block">
+              Suami 
+              <span :hidden="isGroomMember">(Bukan Anggota)</span>
+            </label>
+            <div v-if="isGroomMember" class="flex gap-2 items-center">
+              <UInputMenu
+                v-model="form.groom"
+                :items="memberOptions"
+                :loading="loading"
+                @change="form.groom_name = form.groom.label"
+                placeholder="Pilih anggota (kalau suami anggota)"
+                class="w-full"
+              />
+
+              <UButton
+                type="button"
+                color="primary"
+                variant="outline"
+                @click="form.groom = { label: '', value: 0 }; form.groom_name = ''; isGroomMember = false"
+                label="Anggota"
+              />
+            </div>
+
+            <div v-else class="flex gap-2 items-center">
+              <UInput
+                v-model="form.groom_name"
+                type="text"
+                class="w-full"
+                placeholder="Nama suami jika orang luar"
+              />
+              <UButton
+                type="button"
+                color="primary"
+                variant="outline"
+                @click="form.groom = { label: '', value: 0 }; form.groom_name = ''; isGroomMember = true"
+                label="Bukan Anggota"
+              />
+            </div>
+
+            <div class="text-end w-full text-sm italic mt-1">
+              <small>Click tombol untuk memilih anggota atau bukan anggota</small>
+            </div>
+          </div>
         </div>
 
         <!-- Date + Venue -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="font-semibold text-sm mb-2 block">Tanggal Pemberkatan <span class="text-red-500">*</span></label>
-            <input type="datetime-local" v-model="form.date" required class="w-full px-3 py-2 text-sm rounded-lg" />
+            <UInput v-model="form.date" type="date" class="w-full" required />
           </div>
           <div>
             <label class="font-semibold text-sm mb-2 block">Lokasi Pemberkatan <span class="text-red-500">*</span></label>
-            <input v-model="form.venue" type="text" placeholder="Gereja / Lokasi" required
-              class="w-full px-3 py-2 text-sm rounded-lg" />
+            <UInput
+              v-model="form.venue"
+              type="text"
+              placeholder="Gereja / Lokasi"
+              class="w-full"
+              required
+            />
           </div>
         </div>
 
         <!-- Priest -->
         <div>
-          <label class="font-semibold text-sm mb-2 block">Pelayan Pemberkatan</label>
-          <select :value="form.priest || ''" @change="onPriestChange" class="w-full px-3 py-2 text-sm rounded-lg">
-            <option value="">Pilih pelayan (kalau anggota)</option>
-            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-          <input v-model="form.priest_name" type="text" placeholder="Nama pelayan jika orang luar"
-            class="w-full px-3 py-2 text-sm rounded-lg mt-2" />
+          <label class="font-medium text-sm mb-2 block">
+            Pelayan Pemberkatan
+            <span :hidden="isPriestMember">(Bukan Anggota)</span>
+          </label>
+          <div v-if="isPriestMember" class="flex gap-2 items-center">
+            <UInputMenu
+              v-model="form.priest"
+              :items="memberOptions"
+              :loading="loading"
+              @change="form.priest_name = form.priest.label"
+              placeholder="Pilih pelayan (kalau anggota)"
+              class="w-full"
+            />
+            <UButton
+              type="button"
+              color="primary"
+              variant="outline"
+              @click="form.priest = { label: '', value: 0 }; form.priest_name = ''; isPriestMember = false"
+              label="Anggota"
+            />
+          </div>
+          <div v-else class="flex gap-2 items-center">
+            <UInput
+              v-model="form.priest_name"
+              type="text"
+              placeholder="Nama pelayan jika orang luar"
+              class="w-full"
+            />
+
+            <UButton
+              type="button"
+              color="primary"
+              variant="outline"
+              @click="form.priest = { label: '', value: 0 }; form.priest_name = ''; isPriestMember = true"
+              label="Bukan Anggota"
+            />
+          </div>
+          <div class="text-end w-full text-sm italic mt-1">
+            <small>Click tombol untuk memilih anggota atau bukan anggota</small>
+          </div>
         </div>
+
 
         <!-- Status -->
         <div>
-          <label class="font-semibold text-sm mb-2 block">Status Pernikahan</label>
-          <select v-model.number="form.is_active" class="w-full px-3 py-2 text-sm rounded-lg">
-            <option :value="1">Pasangan Saat Ini</option>
-            <option :value="0">Cerai Hidup / Cerai Mati</option>
-          </select>
+          <label class="font-medium text-sm mb-2 block">Status Pernikahan</label>
+          <USelect
+            v-model.number="form.is_active"
+            :items="[
+              { label: 'Pasangan Saat Ini', value: 1 },
+              { label: 'Cerai Hidup / Cerai Mati', value: 0 },
+            ]"
+            class="w-full"
+          />
         </div>
 
         <!-- Error Message -->
@@ -195,11 +312,11 @@ const save = async () => {
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex gap-3 pt-2">
+        <div class="flex gap-3 pt-2 justify-end">
+          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" label="Batal"
+            @click="router.push('/marriages')" />
           <UButton type="submit" :loading="saving" :disabled="saving" color="primary"
             icon="i-heroicons-check-circle" :label="saving ? 'Menyimpan...' : 'Simpan'" />
-          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Batal"
-            @click="router.push('/marriages')" />
         </div>
       </form>
     </UCard>

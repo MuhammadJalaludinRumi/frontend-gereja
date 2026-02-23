@@ -10,7 +10,7 @@
     </div>
 
     <!-- Table Card -->
-    <UCard :ui="{ body: { padding: '' } }" class="relative z-0 overflow-hidden">
+    <UCard class="relative z-0 overflow-hidden">
       <div class="overflow-x-auto w-full">
         <table class="min-w-full table-auto border-collapse" style="color: var(--ui-text);">
           <thead style="background: var(--ui-bg-muted); border-bottom: 1px solid var(--ui-border);">
@@ -32,6 +32,9 @@
               borderBottom: '1px solid var(--ui-border)',
               background: 'var(--ui-bg)',
             }" @mouseover="hover = m.id" @mouseleave="hover = null" :class="{ 'hovered-row': hover === m.id }">
+              <!-- Date -->
+              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ $formatDate(m.date) }}</td>
+
               <!-- Bride -->
               <td class="px-3 py-3 text-sm whitespace-nowrap">
                 <div class="flex flex-col">
@@ -46,20 +49,10 @@
                   <small v-if="m.groomMember" class="text-xs">ID: {{ m.groomMember.id }}</small>
                 </div>
               </td>
-              <!-- Date -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ formatDateTime(m.date) }}</td>
+              
 
               <!-- Venue -->
-              <td class="px-3 py-3 text-sm max-w-[220px] truncate">{{ m.venue || '-' }}</td>
-
-
-              <!-- Priest -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <div class="flex flex-col">
-                  <span class="font-medium">{{ m.priestMember?.name || m.priest_name || '-' }}</span>
-                  <small v-if="m.priestMember" class="text-xs">ID: {{ m.priestMember.id }}</small>
-                </div>
-              </td>
+              <td class="px-3 py-3 text-sm max-w-55 truncate">{{ m.venue || '-' }}</td>
 
               <!-- is_active (1 = pasangan saat ini, 0 = cerai hidup/cerai mati) -->
               <td class="px-3 py-3 text-sm whitespace-nowrap">
@@ -71,17 +64,12 @@
                 </div>
               </td>
 
-              <!-- raw fields for clarity (optional columns: bride_name/groom_name/priest_name) -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.bride_name || '-' }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.groom_name || '-' }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ m.priest_name || '-' }}</td>
-
               <!-- Actions -->
               <td class="px-3 py-3 text-sm whitespace-nowrap">
                 <div class="flex justify-center gap-2">
-                  <UButton :to="`/marriages/${m.id}`" icon="i-heroicons-pencil-square" size="xs" color="blue"
+                  <UButton :to="`/marriages/${m.id}`" icon="i-heroicons-pencil-square" size="xs" color="info"
                     variant="soft" label="Edit" />
-                  <UButton @click.stop="openDeleteModal(m.id)" icon="i-heroicons-trash" size="xs" color="red"
+                  <UButton @click.stop="openDeleteModal(m.id)" icon="i-heroicons-trash" size="xs" color="error"
                     variant="soft" label="Delete" />
                 </div>
               </td>
@@ -93,7 +81,7 @@
 
     <!-- Delete Modal -->
     <Teleport to="body">
-      <div v-if="isDeleteModalOpen" class="fixed inset-0 z-[99999] flex items-center justify-center"
+      <div v-if="isDeleteModalOpen" class="fixed inset-0 z-99999 flex items-center justify-center"
         style="background: rgba(0,0,0,0.5);">
         <UCard class="max-w-md w-full mx-4"
           style="background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-border);">
@@ -102,7 +90,7 @@
               <h3 class="text-lg font-semibold" style="color: var(--ui-text-highlighted);">
                 Konfirmasi Hapus
               </h3>
-              <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid"
+              <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid"
                 @click="isDeleteModalOpen = false" />
             </div>
           </template>
@@ -114,8 +102,8 @@
 
           <template #footer>
             <div class="flex justify-end gap-3">
-              <UButton color="gray" variant="soft" label="Batal" @click="isDeleteModalOpen = false" />
-              <UButton color="red" label="Hapus" @click="confirmDelete" />
+              <UButton color="neutral" variant="soft" label="Batal" @click="isDeleteModalOpen = false" />
+              <UButton color="error" label="Hapus" @click="confirmDelete" />
             </div>
           </template>
         </UCard>
@@ -141,9 +129,8 @@ const isDeleteModalOpen = ref(false)
 const selectedId = ref<string>('')
 
 const tableHeaders = [
-  'Istri', 'Suami', 'Tanggal', 'Lokasi',
-  'Pelayan', 'Status',
-  'Nama Istri', 'Nama Suami', 'Nama Pelayan'
+  'Tanggal', 'Istri', 'Suami', 'Lokasi',
+  'Status',
 ]
 
 const load = async () => {
@@ -171,24 +158,6 @@ const confirmDelete = async () => {
   } catch (err) {
     console.error('Gagal menghapus marriage:', err)
   }
-}
-
-const formatDateTime = (dateTime: string | null) => {
-  if (!dateTime) return '-'
-  // expect "YYYY-MM-DD hh:mm:ss" or ISO
-  const d = String(dateTime)
-  // try ISO parse fallback to simple split
-  const iso = new Date(d)
-  if (!isNaN(iso.getTime())) {
-    // format to YYYY-MM-DD hh:mm
-    const y = iso.getFullYear()
-    const mo = String(iso.getMonth() + 1).padStart(2, '0')
-    const da = String(iso.getDate()).padStart(2, '0')
-    const hh = String(iso.getHours()).padStart(2, '0')
-    const mm = String(iso.getMinutes()).padStart(2, '0')
-    return `${y}-${mo}-${da} ${hh}:${mm}`
-  }
-  return d.split('.')[0].replace('T', ' ')
 }
 </script>
 
