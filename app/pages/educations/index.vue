@@ -6,7 +6,7 @@
         label="Tambah Riwayat Pendidikan" />
     </div>
 
-    <UCard :ui="{ body: { padding: '' } }" class="relative overflow-hidden">
+    <UCard class="relative overflow-hidden">
       <div v-if="loading" class="p-4 text-center text-sm" style="color: var(--ui-text-muted);">
         Loading bentar sabar...
       </div>
@@ -34,18 +34,18 @@
 
               <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">{{ item.id }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">
-                {{ memberMap[item.member] || 'Unknown' }}
+                {{ item.member_data?.name || 'Tidak Ada Nama' }}
               </td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.level }}</td>
               <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.institution }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.major }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.year_graduate }}</td>
+              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.major ?? '-'}}</td>
+              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.year_graduate ?? '-' }}</td>
 
               <td class="px-3 py-3 text-sm whitespace-nowrap">
                 <div class="flex justify-center gap-2">
-                  <UButton :to="`/educations/${item.id}`" icon="i-heroicons-pencil-square" size="xs" color="blue"
+                  <UButton :to="`/educations/${item.id}`" icon="i-heroicons-pencil-square" size="xs" color="info"
                     variant="soft" label="Edit" />
-                  <UButton @click.stop="openDeleteModal(item.id)" icon="i-heroicons-trash" size="xs" color="red"
+                  <UButton @click.stop="openDeleteModal(item.id)" icon="i-heroicons-trash" size="xs" color="error"
                     variant="soft" label="Delete" />
                 </div>
               </td>
@@ -57,14 +57,14 @@
 
     <!-- Delete Modal -->
     <Teleport to="body">
-      <div v-if="isDeleteModalOpen" class="fixed inset-0 z-[99999] flex items-center justify-center"
+      <div v-if="isDeleteModalOpen" class="fixed inset-0 z-99999 flex items-center justify-center"
         style="background: rgba(0,0,0,0.5);">
         <UCard class="max-w-md w-full mx-4"
           style="background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-border);">
           <template #header>
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold" style="color: var(--ui-text-highlighted);">Konfirmasi Hapus</h3>
-              <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid"
+              <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid"
                 @click="isDeleteModalOpen = false" />
             </div>
           </template>
@@ -75,8 +75,8 @@
 
           <template #footer>
             <div class="flex justify-end gap-3">
-              <UButton color="gray" variant="soft" label="Batal" @click="isDeleteModalOpen = false" />
-              <UButton color="red" label="Hapus" @click="confirmDelete" />
+              <UButton color="neutral" variant="soft" label="Batal" @click="isDeleteModalOpen = false" />
+              <UButton color="error" label="Hapus" @click="confirmDelete" />
             </div>
           </template>
         </UCard>
@@ -93,20 +93,11 @@ import { useEducations } from '~/composables/useEducations'
 import { useMembers } from '~/composables/useMembers'
 
 const { educations, fetchAll, remove, loading } = useEducations()
-const { members, fetchAll: fetchMembers } = useMembers()
 
 onMounted(async () => {
-  await Promise.all([fetchAll(), fetchMembers()]) // fetch semua data
+  await Promise.all([fetchAll()]) // fetch semua data
 })
 
-// bikin map id → nama
-const memberMap = computed(() => {
-  const map: Record<number, string> = {}
-  members.value.forEach(m => {
-    if (m.id != null) map[m.id] = m.name
-  })
-  return map
-})
 
 const hover = ref<number | null>(null)
 const isDeleteModalOpen = ref(false)
