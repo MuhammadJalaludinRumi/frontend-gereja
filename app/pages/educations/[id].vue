@@ -20,6 +20,8 @@ const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
+const memberInput = ref({ label: '', value: 0 })
+
 const form = reactive({
   member: "" as string | number,
   level: "",
@@ -28,20 +30,26 @@ const form = reactive({
   year_graduate: ""
 })
 
-const memberOptions = ref<{ id: number; name: string }[]>([])
+const memberOptions = computed<{ label: string; value: number }[]>(() =>
+  members.value
+    .filter(m => typeof m.id === 'number')
+    .map(m => ({
+      label: m.name,
+      value: m.id!
+    }))
+)
 
 onMounted(async () => {
   try {
     await fetchMembers()
-    memberOptions.value = members.value.map(item => ({
-      id: item.id,
-      name: `${item.name} (${item.id})`
-    }))
-
+    
     await fetchById(id)
+    
     if (education.value) {
       Object.assign(form, education.value)
     }
+
+    memberInput.value = memberOptions.value.find(m => m.value === education.value?.member) || { label: '', value: 0 }
   } catch (err) {
     console.error(err)
     serverError.value = "Gagal memuat data."
@@ -57,6 +65,8 @@ const save = async () => {
     return
   }
 
+  form.member = memberInput.value.value
+
   saving.value = true
   try {
     await update(id, form)
@@ -71,43 +81,38 @@ const save = async () => {
 </script>
 
 <template>
-  <div class="p-6 w-full max-w-3xl mx-auto" style="background: var(--ui-bg); color: var(--ui-text);">
+  <div class="p-6 w-full mx-auto">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Edit Pendidikan</h1>
-      <UButton to="/educations" icon="i-heroicons-arrow-left" color="gray" variant="soft" label="Kembali" />
+      <h1 class="text-2xl font-bold">Edit Pendidikan</h1>
+      <UButton to="/educations" icon="i-heroicons-arrow-left" color="neutral" variant="link" label="Kembali" />
     </div>
 
-    <div v-if="loading" class="mb-4 text-sm text-gray-400">Loading data pendidikan...</div>
-
-    <UCard v-else :ui="{ body: { padding: 'p-6' } }">
+    <UCard>
       <form @submit.prevent="save" class="space-y-6">
 
         <!-- Member -->
         <div>
           <label class="block mb-2 text-sm font-semibold">Pilih Member <span class="text-red-500">*</span></label>
-          <select v-model="form.member" class="w-full px-3 py-2 rounded-lg text-sm" style="background: var(--ui-bg); border:1px solid var(--ui-border);">
-            <option value="">Pilih anggota gereja</option>
-            <option v-for="m in memberOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
+          <UInputMenu v-model="memberInput" :items="memberOptions" placeholder="Cari member..." class="w-full" :loading="loading"/>
         </div>
 
         <!-- Level, Institution, Major, Year -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block mb-2 text-sm font-semibold">Jenjang Pendidikan <span class="text-red-500">*</span></label>
-            <input v-model="form.level" type="text" placeholder="Contoh: S1 / SMA / S2" class="w-full px-3 py-2 rounded-lg text-sm" style="background: var(--ui-bg); border:1px solid var(--ui-border);" />
+            <USelect v-model="form.level" :items="['TK', 'SD', 'SMP', 'SMA', 'D1', 'D2', 'D3', 'S1', 'S2', 'S3'].map(l => ({ label: l, value: l }))" placeholder="Pilih jenjang..." class="w-full mt-2" />
           </div>
           <div>
             <label class="block mb-2 text-sm font-semibold">Institusi <span class="text-red-500">*</span></label>
-            <input v-model="form.institution" type="text" placeholder="Contoh: Universitas Brawijaya" class="w-full px-3 py-2 rounded-lg text-sm" style="background: var(--ui-bg); border:1px solid var(--ui-border);" />
+            <UInput v-model="form.institution" type="text" placeholder="Contoh: Universitas Brawijaya" class="w-full mt-2" />
           </div>
           <div>
             <label class="block mb-2 text-sm font-semibold">Jurusan</label>
-            <input v-model="form.major" type="text" placeholder="Contoh: Teknik Informatika" class="w-full px-3 py-2 rounded-lg text-sm" style="background: var(--ui-bg); border:1px solid var(--ui-border);" />
+            <UInput v-model="form.major" type="text" placeholder="Contoh: Teknik Informatika" class="w-full mt-2" />
           </div>
           <div>
             <label class="block mb-2 text-sm font-semibold">Tahun Lulus</label>
-            <input v-model="form.year_graduate" type="number" placeholder="Contoh: 2021" class="w-full px-3 py-2 rounded-lg text-sm" style="background: var(--ui-bg); border:1px solid var(--ui-border);" />
+            <UInput v-model="form.year_graduate" type="number" placeholder="Contoh: 2021" class="w-full mt-2" />            
           </div>
         </div>
 
@@ -115,9 +120,9 @@ const save = async () => {
           {{ serverError }}
         </div>
 
-        <div class="flex items-center gap-3 pt-2">
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" label="Batal" @click="router.push('/educations')" />
           <UButton type="submit" :loading="saving" :disabled="saving" color="primary" icon="i-heroicons-check-circle" :label="saving ? 'Menyimpan...' : 'Update'" />
-          <UButton color="gray" variant="soft" icon="i-heroicons-x-mark" label="Batal" @click="router.push('/educations')" />
         </div>
       </form>
     </UCard>

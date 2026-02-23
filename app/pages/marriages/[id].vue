@@ -61,8 +61,6 @@ const loadData = async () => {
       form.date = $formatDateForInput(marriage.value.date)
       form.venue = marriage.value.venue ?? ''
       form.is_active = Number(marriage.value.is_active) ?? 1
-
-      console.log('Form', form)
     }
 
     isBrideMember.value = !!marriage.value?.bride
