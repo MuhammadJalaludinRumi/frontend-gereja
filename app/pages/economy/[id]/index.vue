@@ -147,12 +147,4 @@ const updateData = async () => {
     saving.value = false
   }
 }
-
-const classOptions = [
-  "miskin",
-  "rentan miskin",
-  "menuju menengah",
-  "menengah",
-  "atas"
-]
 </script>
