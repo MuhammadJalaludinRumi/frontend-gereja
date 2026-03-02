@@ -11,9 +11,6 @@ const loading = ref(true)
 
 const showDetailModal = ref(false)
 const selectedRow = ref<any>(null)
-const confirm = useConfirmDialog()
-
-const toast = useToast()
 
 const pagination = ref({
   pageIndex: 0,
@@ -52,7 +49,7 @@ onMounted(async () => {
 })
 
 const columns = [
-  { header: '#', accessorKey: 'id', id: 'id', sortable: true},
+  { header: '#', accessorKey: 'id', id: 'id'},
   { header: 'Foto', accessorKey: 'photo', id: 'photo' },
   { header: 'No Induk', accessorKey: 'id_local', id: 'id_local', sortable: true },
   { header: 'Nama', accessorKey: 'name', id: 'name', sortable: true },
@@ -73,38 +70,6 @@ const openDetail = (row: any) => {
   showDetailModal.value = true
 }
 
-// const handleDelete = async (row: any) => {
-//   const confirmed = await confirm({
-//     title: 'Konfirmasi Hapus',
-//     type: 'anggota',
-//     data: row.name
-//   })
-
-//   if (confirmed) {
-//     loading.value = true
-//     try {
-//       await remove(row.id)
-//       toast.add({
-//         title: 'Berhasil Menghapus',
-//         description: `Anggota ${row.name} berhasil dihapus.`,
-//         color: 'success'
-//       })
-
-//       await fetchAll()
-//     } catch (err) {
-//       console.error("Error deleting member:", err)
-      
-//       toast.add({
-//         title: 'Gagal Menghapus',
-//         description: 'Terjadi kesalahan saat menghapus anggota. Silakan coba lagi.',
-//         color: 'error'
-//       })
-//     } finally {
-//       loading.value = false
-//     }
-//   }
-// }
-
 const handleDelete = async (row: any) => {
   await remove(row.id)
   await fetchAll()
@@ -124,7 +89,8 @@ const onSearch = async (query: string) => {
 <template>
   <DefaultList title="Anggota">
     <DataTable
-      :data="membersData" 
+      type="Anggota"
+      :data="membersData"
       :columns="columns" 
       :loading="loading" 
       :show-detail="true" 

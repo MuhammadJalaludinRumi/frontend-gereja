@@ -4,6 +4,7 @@ const props = defineProps<{
   onDelete: (row: any) => Promise<void>
   label?: string
   type?: string
+  labelData?: string
 }>()
 
 const toast = useToast()
@@ -15,7 +16,7 @@ const handleClick = async () => {
   const confirmed = await confirm({
     title: 'Konfirmasi Hapus',
     type: props.type || 'data',
-    data: props.row?.name || '-'
+    data: props.labelData || ''
   })
 
   if (!confirmed) return
@@ -26,7 +27,7 @@ const handleClick = async () => {
 
     toast.add({
       title: 'Berhasil Menghapus',
-      description: `${props.type || 'Data'} ${props.row?.name || ''} berhasil dihapus.`,
+      description: `${props.type || 'Data'} #${props.row?.name || ''} berhasil dihapus.`,
       color: 'success'
     })
   } catch (err) {

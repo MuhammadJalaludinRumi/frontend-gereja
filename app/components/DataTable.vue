@@ -17,6 +17,7 @@ const emit = defineEmits([
 ])
 
 const props = withDefaults(defineProps<{
+  type: string
   data: any[]
   columns: Column[]
   showActions?: boolean
@@ -148,10 +149,6 @@ watch(sorting, (val) => {
 
       <!-- Default rendering -->
       <template v-else>
-        <!-- <div v-if="col.accessorKey === 'photo'">
-          <UAvatar :src="slotProps.row.original[col.accessorKey]" size="xs" />
-        </div> -->
-
         <div>
           <p class="text-sm font-medium whitespace-nowrap">
             {{ slotProps.row.original[col.accessorKey] }}
@@ -167,7 +164,8 @@ watch(sorting, (val) => {
         <DeleteButton
           :row="row.original"
           :on-delete="async (r) => $emit('delete', r)"
-          type="anggota"
+          :type="type"
+          :labelData="row.original.id"
         />
       </div>
     </template>

@@ -1,127 +1,94 @@
-<template>
-  <div class="p-6 w-full overflow-hidden" style="background: var(--ui-bg); color: var(--ui-text);">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Daftar Pendidikan</h1>
-      <UButton to="/educations/create" icon="i-heroicons-plus-circle" size="md" color="primary"
-        label="Tambah Riwayat Pendidikan" />
-    </div>
-
-    <UCard class="relative overflow-hidden">
-      <div v-if="loading" class="p-4 text-center text-sm" style="color: var(--ui-text-muted);">
-        Loading bentar sabar...
-      </div>
-
-      <div v-else class="overflow-x-auto w-full">
-        <table class="min-w-full table-auto border-collapse" style="color: var(--ui-text);">
-          <thead style="background: var(--ui-bg-muted); border-bottom: 1px solid var(--ui-border);">
-            <tr>
-              <th v-for="head in tableHeaders" :key="head"
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-                style="color: var(--ui-text-highlighted);">
-                {{ head }}
-              </th>
-              <th class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap"
-                style="color: var(--ui-text-highlighted);">
-                Aksi
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr v-for="item in educations" :key="item.id" class="transition-colors"
-              :style="{ borderBottom: '1px solid var(--ui-border)', background: 'var(--ui-bg)' }"
-              @mouseover="hover = item.id" @mouseleave="hover = null" :class="{ 'hovered-row': hover === item.id }">
-
-              <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">{{ item.id }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                {{ item.member_data?.name || 'Tidak Ada Nama' }}
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.level }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.institution }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.major ?? '-'}}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ item.year_graduate ?? '-' }}</td>
-
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <div class="flex justify-center gap-2">
-                  <UButton :to="`/educations/${item.id}`" icon="i-heroicons-pencil-square" size="xs" color="info"
-                    variant="soft" label="Edit" />
-                  <UButton @click.stop="openDeleteModal(item.id)" icon="i-heroicons-trash" size="xs" color="error"
-                    variant="soft" label="Delete" />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </UCard>
-
-    <!-- Delete Modal -->
-    <Teleport to="body">
-      <div v-if="isDeleteModalOpen" class="fixed inset-0 z-99999 flex items-center justify-center"
-        style="background: rgba(0,0,0,0.5);">
-        <UCard class="max-w-md w-full mx-4"
-          style="background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-border);">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold" style="color: var(--ui-text-highlighted);">Konfirmasi Hapus</h3>
-              <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid"
-                @click="isDeleteModalOpen = false" />
-            </div>
-          </template>
-
-          <div class="py-4">
-            <p>Yakin mau hapus riwayat ini? Jangan asal, ini penting.</p>
-          </div>
-
-          <template #footer>
-            <div class="flex justify-end gap-3">
-              <UButton color="neutral" variant="soft" label="Batal" @click="isDeleteModalOpen = false" />
-              <UButton color="error" label="Hapus" @click="confirmDelete" />
-            </div>
-          </template>
-        </UCard>
-      </div>
-    </Teleport>
-  </div>
-</template>
-
 <script setup lang="ts">
-definePageMeta({ middleware: ['role'], roles: [4] })
+import DefaultList from '~/layouts/default-list.vue';
 
-import { ref, onMounted, computed } from 'vue' // <--- jangan lupa computed
-import { useEducations } from '~/composables/useEducations'
-import { useMembers } from '~/composables/useMembers'
-
-const { educations, fetchAll, remove, loading } = useEducations()
-
-onMounted(async () => {
-  await Promise.all([fetchAll()]) // fetch semua data
+definePageMeta({
+  middleware: ['role'],
+  roles: [4]
 })
 
+const { educations, meta, fetchAll, remove } = useEducations()
+const loading = ref(true)
 
-const hover = ref<number | null>(null)
-const isDeleteModalOpen = ref(false)
-const selectedId = ref<number | null>(null)
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: 10
+})
 
-const tableHeaders = ['ID', 'Member', 'Jenjang', 'Institusi', 'Jurusan', 'Tahun Lulus']
+const search = ref('')
 
-onMounted(fetchAll)
+watch(
+  (): [number, number, string] => [pagination.value.pageIndex, pagination.value.pageSize, search.value],
+  async ([pageIndex, pageSize, searchValue]: [number, number, string]) => {
+    loading.value = true
+    try {
+      await fetchAll({
+        page: pageIndex + 1,
+        per_page: pageSize,
+        search: searchValue
+      })
+    } finally {
+      loading.value = false
+    }
+  }
+)
 
-const openDeleteModal = (id: number) => {
-  selectedId.value = id
-  isDeleteModalOpen.value = true
+onMounted(async () => {
+  try {
+    await fetchAll({
+      page: pagination.value.pageIndex + 1,
+      per_page: pagination.value.pageSize,
+    })
+  } catch (err) {
+    console.error("Error fetching marriages:", err)
+  } finally {
+    loading.value = false
+  }
+})
+
+const columns = [
+  { header: '#', accessorKey: 'id', id: 'id',},
+  { header: 'Anggota', accessorKey: 'member_name', id: 'member_name' },
+  { header: 'Jenjang', accessorKey: 'level', id: 'level', },
+  { header: 'Institusi', accessorKey: 'institution', id: 'institution', },
+  { header: 'Jurusan', accessorKey: 'major', id: 'major', },
+  { header: 'Tahun', accessorKey: 'year_graduate', id: 'year_graduate', },
+]
+
+const educationData = computed(() => {
+  return educations.value.map(education => ({
+    ...education,
+    member_name: education.member_data.name ?? '-'
+  }))
+})
+
+const handleDelete = async (row: any) => {
+  await remove(row.id)
+  await fetchAll()
 }
 
-const confirmDelete = async () => {
-  if (!selectedId.value) return
-  await remove(selectedId.value)
-  isDeleteModalOpen.value = false
-  fetchAll()
+const onSearch = async (query: string) => {
+  search.value = query
+
+  pagination.value = {
+    ...pagination.value,
+    pageIndex: 0
+  }
 }
+
 </script>
 
-<style scoped>
-.hovered-row {
-  background: var(--ui-bg-muted) !important;
-}
-</style>
+<template>
+  <DefaultList title="Pendidikan">
+    <DataTable 
+      type="Pendidikan"
+      :data="educationData"
+      :columns="columns"
+      :loading="loading"
+      :total="meta.total"
+      :pagination="pagination"
+      @update:pagination="pagination = $event"
+      @delete="handleDelete"
+      @search="onSearch"
+    />
+  </DefaultList>
+</template>

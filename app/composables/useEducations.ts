@@ -7,6 +7,12 @@ export const useEducations = () => {
   const apiBase = useApiUrl()
   const educations = ref<any[]>([])
   const education = ref<any>(null)
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -26,16 +32,27 @@ export const useEducations = () => {
     return headers
   }
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch('/educations', {
+      const res: any = await $fetch('/educations', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
-      educations.value = res
+      educations.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (err) {
       error.value = 'Gagal memuat data Education'
     } finally {
@@ -89,5 +106,16 @@ export const useEducations = () => {
     })
   }
 
-  return { educations, education, fetchAll, fetchById, create, update, remove, loading, error }
+  return { 
+    educations, 
+    education, 
+    meta,
+    fetchAll, 
+    fetchById, 
+    create, 
+    update, 
+    remove, 
+    loading, 
+    error 
+  }
 }

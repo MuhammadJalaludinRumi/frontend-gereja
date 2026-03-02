@@ -8,6 +8,7 @@ import { ref, reactive, onMounted } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useEducations } from "~/composables/useEducations"
 import { useMembers } from "~/composables/useMembers"
+import DefaultForm from '~/layouts/default-form.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -81,52 +82,44 @@ const save = async () => {
 </script>
 
 <template>
-  <div class="p-6 w-full mx-auto">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Edit Pendidikan</h1>
-      <UButton to="/educations" icon="i-heroicons-arrow-left" color="neutral" variant="link" label="Kembali" />
-    </div>
+  <DefaultForm title="Edit Pendidikan" :loading="loading">
+    <form @submit.prevent="save" class="space-y-6">
+      <!-- Member -->
+      <div>
+        <label class="block mb-2 text-sm font-semibold">Pilih Member <span class="text-red-500">*</span></label>
+        <UInputMenu v-model="memberInput" :items="memberOptions" placeholder="Cari member..." class="w-full" :loading="loading"/>
+      </div>
 
-    <UCard>
-      <form @submit.prevent="save" class="space-y-6">
-
-        <!-- Member -->
+      <!-- Level, Institution, Major, Year -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block mb-2 text-sm font-semibold">Pilih Member <span class="text-red-500">*</span></label>
-          <UInputMenu v-model="memberInput" :items="memberOptions" placeholder="Cari member..." class="w-full" :loading="loading"/>
+          <label class="block mb-2 text-sm font-semibold">Jenjang Pendidikan <span class="text-red-500">*</span></label>
+          <USelect v-model="form.level" :items="['TK', 'SD', 'SMP', 'SMA', 'D1', 'D2', 'D3', 'S1', 'S2', 'S3'].map(l => ({ label: l, value: l }))" placeholder="Pilih jenjang..." class="w-full mt-2" />
         </div>
+        <div>
+          <label class="block mb-2 text-sm font-semibold">Institusi <span class="text-red-500">*</span></label>
+          <UInput v-model="form.institution" type="text" placeholder="Contoh: Universitas Brawijaya" class="w-full mt-2" />
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-semibold">Jurusan</label>
+          <UInput v-model="form.major" type="text" placeholder="Contoh: Teknik Informatika" class="w-full mt-2" />
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-semibold">Tahun Lulus</label>
+          <UInput v-model="form.year_graduate" type="number" placeholder="Contoh: 2021" class="w-full mt-2" />            
+        </div>
+      </div>
 
-        <!-- Level, Institution, Major, Year -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block mb-2 text-sm font-semibold">Jenjang Pendidikan <span class="text-red-500">*</span></label>
-            <USelect v-model="form.level" :items="['TK', 'SD', 'SMP', 'SMA', 'D1', 'D2', 'D3', 'S1', 'S2', 'S3'].map(l => ({ label: l, value: l }))" placeholder="Pilih jenjang..." class="w-full mt-2" />
-          </div>
-          <div>
-            <label class="block mb-2 text-sm font-semibold">Institusi <span class="text-red-500">*</span></label>
-            <UInput v-model="form.institution" type="text" placeholder="Contoh: Universitas Brawijaya" class="w-full mt-2" />
-          </div>
-          <div>
-            <label class="block mb-2 text-sm font-semibold">Jurusan</label>
-            <UInput v-model="form.major" type="text" placeholder="Contoh: Teknik Informatika" class="w-full mt-2" />
-          </div>
-          <div>
-            <label class="block mb-2 text-sm font-semibold">Tahun Lulus</label>
-            <UInput v-model="form.year_graduate" type="number" placeholder="Contoh: 2021" class="w-full mt-2" />            
-          </div>
-        </div>
+      <div v-if="serverError" class="px-4 py-3 rounded-lg text-sm whitespace-pre-wrap" style="background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;">
+        {{ serverError }}
+      </div>
 
-        <div v-if="serverError" class="px-4 py-3 rounded-lg text-sm whitespace-pre-wrap" style="background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;">
-          {{ serverError }}
-        </div>
-
-        <div class="flex items-center justify-end gap-3 pt-2">
-          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" label="Batal" @click="router.push('/educations')" />
-          <UButton type="submit" :loading="saving" :disabled="saving" color="primary" icon="i-heroicons-check-circle" :label="saving ? 'Menyimpan...' : 'Update'" />
-        </div>
-      </form>
-    </UCard>
-  </div>
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" label="Batal" @click="router.push('/educations')" />
+        <UButton type="submit" :loading="saving" :disabled="saving" color="primary" icon="i-heroicons-check-circle" :label="saving ? 'Menyimpan...' : 'Update'" />
+      </div>
+    </form>
+  </DefaultForm>
 </template>
 
 <style scoped>

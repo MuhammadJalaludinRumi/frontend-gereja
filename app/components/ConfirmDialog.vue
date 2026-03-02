@@ -26,7 +26,7 @@ const emits = defineEmits<{
       <h2 class="text-lg font-bold">{{ title }}</h2>
     </template>
     <template #body>
-      <p>Apakah Anda yakin ingin menghapus {{ type }} <span class="font-bold italic">{{ data }}</span>?</p>
+      <p>Apakah Anda yakin ingin menghapus {{ type }} <span class="font-bold italic">#{{ data }}</span>?</p>
       <small class="text-error font-medium">Data yang dihapus tidak dapat dikembalikan!</small>
     </template>
 
