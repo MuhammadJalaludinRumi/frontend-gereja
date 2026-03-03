@@ -22,15 +22,16 @@ const props = withDefaults(defineProps<{
   columns: Column[]
   showActions?: boolean
   loading: boolean
-  showDetail?: boolean
   total?: number
-  pagination: {
+  pagination?: {
     pageIndex: number
     pageSize: number
   }
+  showInputSearch?: boolean 
 }>(), {
   showActions: true,
-  showDetail: false,
+  showInputSearch: true,
+  pagination: undefined,
 })
 
 const route = useRoute()
@@ -78,10 +79,14 @@ watch(sorting, (val) => {
   emit('sort', val)
 })
 
+const getValue = (obj: any, path: string) => {
+  return path.split('.').reduce((acc, part) => acc?.[part], obj) ?? '-'
+}
+
 </script>
 
 <template>
-  <div class="w-full flex justify-end item-center gap-2 mb-4">
+  <div v-if="showInputSearch" class="w-full flex justify-end item-center gap-2 mb-4">
     <UInput 
       v-model="searchQuery"
       placeholder="Ketik untuk mencari..." 
@@ -151,28 +156,43 @@ watch(sorting, (val) => {
       <template v-else>
         <div>
           <p class="text-sm font-medium whitespace-nowrap">
-            {{ slotProps.row.original[col.accessorKey] }}
+            {{ getValue(slotProps.row.original, col.accessorKey) }}
           </p>
         </div>
       </template>
     </template>
 
-    <template #actions-cell="{ row }">
+    <template #actions-cell="slotProps">
       <div class="flex gap-2">
-        <UButton v-if="showDetail" icon="i-heroicons-information-circle" color="neutral" variant="soft" size="xs" label="Detail" @click="$emit('detail', row.original)" class="cursor-pointer" />
-        <UButton icon="i-heroicons-pencil-square" color="info" variant="soft" size="xs" label="Edit" :to="`${route.path}/${row.original.id}`" class="cursor-pointer" />
+        <!-- Custom slot -->
+        <slot
+          name="actions-cell"
+          v-bind="slotProps"
+        />
+
+        <!-- Default actions -->
+        <UButton
+          icon="i-heroicons-pencil-square"
+          color="info"
+          variant="soft"
+          size="xs"
+          label="Edit"
+          :to="`${route.path}/${slotProps.row.original.id}`"
+          class="cursor-pointer"
+        />
+
         <DeleteButton
-          :row="row.original"
+          :row="slotProps.row.original"
           :on-delete="async (r) => $emit('delete', r)"
           :type="type"
-          :labelData="row.original.id"
+          :labelData="slotProps.row.original.id"
         />
       </div>
     </template>
   </UTable>
 
   <!-- Pagination -->
-  <div class="flex justify-end border-t border-default pt-4 px-4 gap-2">
+  <div v-if="pagination" class="flex justify-end border-t border-default pt-4 px-4 gap-2">
     <USelect
       :model-value="pagination.pageSize"
       :items="[10, 20, 50]"

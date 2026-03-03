@@ -26,13 +26,15 @@ const emits = defineEmits<{
       <h2 class="text-lg font-bold">{{ title }}</h2>
     </template>
     <template #body>
-      <p>Apakah Anda yakin ingin menghapus {{ type }} <span class="font-bold italic">#{{ data }}</span>?</p>
-      <small class="text-error font-medium">Data yang dihapus tidak dapat dikembalikan!</small>
+      <div>
+        <p>Apakah Anda yakin ingin menghapus Data {{ type }} <span class="font-bold italic">#{{ data }}</span>?</p>
+        <small class="text-error font-medium">Data yang dihapus tidak dapat dikembalikan!</small>
+      </div>
     </template>
 
     <template #footer>
-      <UButton label="Kembali" color="neutral" variant="outline" @click="emits('close', false)" />
-      <UButton icon="i-heroicons-trash" label="Hapus" variant="solid" color="error" @click="emits('close', true)" />
+      <UButton label="Kembali" color="neutral" variant="ghost" @click="emits('close', false)" />
+      <UButton icon="i-heroicons-trash" label="Hapus" variant="soft" color="error" @click="emits('close', true)" />
     </template>
   </UModal>
 </template>

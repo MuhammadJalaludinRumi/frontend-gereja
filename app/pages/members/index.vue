@@ -93,7 +93,6 @@ const onSearch = async (query: string) => {
       :data="membersData"
       :columns="columns" 
       :loading="loading" 
-      :show-detail="true" 
       :total="meta.total"
       :pagination="pagination"
       @update:pagination="pagination = $event"
@@ -105,6 +104,17 @@ const onSearch = async (query: string) => {
         <UAvatar
           :src="row.original.photo"
           size="xs"
+        />
+      </template>
+      
+      <template #actions-cell="{ row }">
+        <UButton
+          icon="i-heroicons-information-circle"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          label="Detail"
+          @click="openDetail(row.original)"
         />
       </template>
     </DataTable>

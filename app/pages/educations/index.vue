@@ -47,19 +47,12 @@ onMounted(async () => {
 
 const columns = [
   { header: '#', accessorKey: 'id', id: 'id',},
-  { header: 'Anggota', accessorKey: 'member_name', id: 'member_name' },
+  { header: 'Anggota', accessorKey: 'member_data.name', id: 'member_data.name' },
   { header: 'Jenjang', accessorKey: 'level', id: 'level', },
   { header: 'Institusi', accessorKey: 'institution', id: 'institution', },
   { header: 'Jurusan', accessorKey: 'major', id: 'major', },
   { header: 'Tahun', accessorKey: 'year_graduate', id: 'year_graduate', },
 ]
-
-const educationData = computed(() => {
-  return educations.value.map(education => ({
-    ...education,
-    member_name: education.member_data.name ?? '-'
-  }))
-})
 
 const handleDelete = async (row: any) => {
   await remove(row.id)
@@ -81,7 +74,7 @@ const onSearch = async (query: string) => {
   <DefaultList title="Pendidikan">
     <DataTable 
       type="Pendidikan"
-      :data="educationData"
+      :data="educations"
       :columns="columns"
       :loading="loading"
       :total="meta.total"

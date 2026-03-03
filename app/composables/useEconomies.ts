@@ -2,10 +2,23 @@ import { ref, computed } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
+export interface Economy {
+  id: number
+  member: Member
+  update: string | Date
+  class: string
+}
+
 export const useEconomies = () => {
   const apiBase = useApiUrl()
-  const economies = ref<any[]>([])
-  const economy = ref<any>(null)
+  const economies = ref<Economy[]>([])
+  const economy = ref<Economy | null >(null)
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -25,16 +38,27 @@ export const useEconomies = () => {
     return headers
   }
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch('/economies', {
+      const res: any = await $fetch('/economies', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
-      economies.value = res
+      economies.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (err) {
       error.value = 'Gagal memuat data Economy'
       console.error(err)
@@ -47,7 +71,7 @@ export const useEconomies = () => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch(`/economies/${id}`, {
+      const res: any = await $fetch(`/economies/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
@@ -107,5 +131,16 @@ export const useEconomies = () => {
     }
   }
 
-  return { economies, economy, fetchAll, fetchById, create, update, remove, loading, error }
+  return { 
+    economies, 
+    economy,
+    meta,
+    fetchAll, 
+    fetchById, 
+    create, 
+    update, 
+    remove, 
+    loading, 
+    error 
+  }
 }
