@@ -1,59 +1,3 @@
-<template>
-  <div class="p-6 w-full mx-auto" style="background: var(--ui-bg); color: var(--ui-text);">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Edit Economy</h1>
-      <UButton to="/economy" icon="i-heroicons-arrow-left" color="neutral" variant="ghost" label="Kembali" />
-    </div>
-
-    <UCard v-if="!loadingData">
-      <form @submit.prevent="updateData" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Member -->
-          <div>
-            <label class="block mb-1 font-medium text-sm">Member</label>
-            <UInputMenu
-            v-model="form.member"
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-
-          <!-- Update -->
-          <div>
-            <label class="block mb-1 font-medium text-sm">Update</label>
-            <UInput v-model="form.update" type="date" class="w-full"/>
-          </div>
-
-          <!-- Class -->
-          <div class="md:col-span-2">
-            <label class="block mb-1 font-medium text-sm">Class</label>
-            <USelect
-              v-model="form.class"
-              :items="[
-                { label: 'Miskin', value: 'miskin' },
-                { label: 'Rentan Miskin', value: 'rentan miskin' },
-                { label: 'Menuju Menengah', value: 'menuju menengah' },
-                { label: 'Menengah', value: 'menengah' },
-                { label: 'Atas', value: 'atas' },
-              ]"
-              class="w-full"
-            />
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton color="neutral" variant="ghost" label="Batal" @click="router.push('/economy')"
-            icon="i-heroicons-x-mark" />
-          <UButton type="submit" color="primary" :loading="saving" :disabled="saving" label="Update"
-            icon="i-heroicons-check-circle" />
-        </div>
-      </form>
-    </UCard>
-
-    <div v-else class="text-center text-sm text-gray-400">Loading data...</div>
-  </div>
-</template>
-
 <script setup lang="ts">
 definePageMeta({
   middleware: ['role'],
@@ -61,9 +5,9 @@ definePageMeta({
 })
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useEconomies } from '~/composables/useEconomies'
-import { useMembers } from '~/composables/useMembers'
+import DropdownMember from '~/components/member/DropdownMember.vue'
 import { useEconomyHistory } from '~/composables/useEconomyHistory'
+import DefaultForm from '~/layouts/default-form.vue'
 
 const { addHistory } = useEconomyHistory()
 
@@ -72,49 +16,51 @@ const route = useRoute()
 const id = Number(route.params.id)
 
 const { economy, fetchById, update, loading } = useEconomies()
-const { members, fetchAll: fetchMembers } = useMembers()
+const { memberSelect, fetchMemberSelect } = useMembers()
+const currentMemberSelect = ref<{ value: number, label: string }>({ value: 0, label: '' })
 
 const saving = ref(false)
 const loadingData = ref(true)
 
 const form = reactive({
-  member: { label: '', value: 0 },
+  member: 0,
   update: '',
   class: ''
 })
 
 onMounted(async () => {
-  await fetchMembers()
-  await fetchById(id)
+  try {
+    await fetchById(id)
 
-  loadingData.value = false
+    form.member = economy.value?.member.id ?? 0
+    form.update = $formatDateForInput(String(economy.value?.update)) ?? '' 
+    form.class = economy.value?.class ?? ''
+    
+    await fetchMemberSelect({ id: form.member })
+    currentMemberSelect.value = memberSelect.value?.[0] ?? { value: 0, label: '' }
+  } catch (err) {
+    console.error('Failed to Fetch', err)
+  } finally {
+    loadingData.value = false
+  }
 })
 
-watch(economy, (newVal) => {
-  if (newVal) {
-    const selected = $findOptions(
-      memberOptions.value,
-      [newVal.member?.id || 0]
-    )[0]
-
-    form.member = selected || { label: '', value: 0 }
-    form.update = $formatDateForInput(newVal.update) || ''
-    form.class = newVal.class || ''
+const fetchMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    return
   }
-}, { immediate: true })
 
-
-const memberOptions = computed<{ label: string; value: number }[]>(() =>
-  members.value
-    .filter(m => typeof m.id === 'number')
-    .map(m => ({
-      label: m.name,
-      value: m.id!
-    }))
-)
+  loading.value = true
+  try {
+    await fetchMemberSelect({ search })
+  } finally {
+    loading.value = false
+  }
+}
 
 const updateData = async () => {
-  if (form.member.value === 0 || !form.update || !form.class) {
+  if (form.member === 0 || !form.update || !form.class) {
     alert('Semua field harus diisi')
     return
   }
@@ -122,14 +68,10 @@ const updateData = async () => {
   saving.value = true
   
   try {
-    const before = economy.value.class      // class lama
+    const before = economy.value?.class      // class lama
     const after = form.class                // class baru
 
-    await update(id, {
-      member: form.member.value,
-      update: form.update,
-      class: form.class
-    })
+    await update(id, form)
 
     // simpan riwayat
     await addHistory({
@@ -148,3 +90,57 @@ const updateData = async () => {
   }
 }
 </script>
+
+<template>
+  <DefaultForm title="Edit Ekonomi" :loading="loadingData">
+    <form @submit.prevent="updateData" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Member -->
+        <div>
+          <label class="block mb-1 font-medium text-sm">Anggota<span class="text-error">*</span></label>
+          <DropdownMember
+            :member-items="memberSelect"
+            :loading="loading"
+            :selected="currentMemberSelect?.value"
+            :selected-label="currentMemberSelect?.label"
+            @search="fetchMembers"
+            @update:selected="(val: number) => form.member = val ?? 0"
+          />
+        </div>
+
+        <!-- Update -->
+        <div>
+          <label class="block mb-1 font-medium text-sm">Update<span class="text-error">*</span></label>
+          <UInput v-model="form.update" type="date" class="w-full" required/>
+        </div>
+
+        <!-- Class -->
+        <div>
+          <label class="block mb-1 font-medium text-sm">Kelas<span class="text-error">*</span></label>
+          <USelect
+            v-model="form.class"
+            :items="[
+              { label: 'Miskin', value: 'miskin' },
+              { label: 'Rentan Miskin', value: 'rentan miskin' },
+              { label: 'Menuju Menengah', value: 'menuju menengah' },
+              { label: 'Menengah', value: 'menengah' },
+              { label: 'Atas', value: 'atas' },
+            ]"
+            class="w-full"
+            placeholder="Pilih Kelas"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <UButton color="neutral" variant="ghost" label="Batal" @click="router.push('/economy')"
+          icon="i-heroicons-x-mark" />
+        <UButton type="submit" color="primary" :loading="saving" :disabled="saving" label="Update"
+          icon="i-heroicons-check-circle" />
+      </div>
+    </form>
+  </DefaultForm>
+</template>
+
+

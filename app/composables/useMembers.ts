@@ -2,14 +2,25 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
-export interface City {
+interface Province {
   id: number
   name: string
 }
 
+export interface City {
+  id: number
+  name: string
+  province_id: number
+  province_relation: Province
+}
+
 export interface Member {
   id?: number
+  id_local?: string
+  id_type?: string
   name: string
+  dob: string
+  pob: string
   photo?: string
   city?: City | number | null
   phone?: string
@@ -24,6 +35,14 @@ export const useMembers = () => {
   const members = ref<Member[]>([])
   const familyMembers = ref<Member[]>([])
   const member = ref<Member | null>(null)
+  const memberSelect = ref<{value: number, label: string}[]>([]) // untuk dropdown
+
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -44,7 +63,6 @@ export const useMembers = () => {
     })
     return fd
   }
-
 
   // ======================
   // GET HEADERS (1:1 with ACLS)
@@ -78,18 +96,30 @@ export const useMembers = () => {
   // ===========================
   // GET ALL MEMBERS
   // ===========================
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+    family_id?: string
+  }) => {
     loading.value = true
     error.value = null
 
     try {
-      const res = await $fetch('/members', {
+      const res: any = await $fetch('/members', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
 
-      members.value = res?.data ?? res
+      members.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (err) {
       error.value = 'Gagal memuat data member'
       console.error(err)
@@ -106,7 +136,7 @@ export const useMembers = () => {
     error.value = null
 
     try {
-      const res = await $fetch(`/members/${id}`, {
+      const res: Member = await $fetch(`/members/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
@@ -135,7 +165,7 @@ export const useMembers = () => {
     error.value = null
 
     try {
-      const res = await $fetch(`/members/by-kk/${kk}`, {
+      const res: any = await $fetch(`/members/by-kk/${kk}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
@@ -178,7 +208,7 @@ export const useMembers = () => {
         isFormData = true
       }
 
-      const res = await $fetch('/members', {
+      const res: any = await $fetch('/members', {
         baseURL: apiBase,
         method: 'POST',
         headers: getHeaders(isFormData),
@@ -208,7 +238,7 @@ export const useMembers = () => {
         payload = normalizePayload(payload)
       }
 
-      const res = await $fetch(`/members/${id}`, {
+      const res: any = await $fetch(`/members/${id}`, {
         baseURL: apiBase,
         method: isFormData ? 'POST' : 'PUT',
         headers: getHeaders(isFormData),
@@ -250,10 +280,36 @@ export const useMembers = () => {
     }
   }
 
+  const fetchMemberSelect = async (params?: {id?: number, search?: string}) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const res: {value: number, label: string}[] = await $fetch('/members/select', {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include',
+        params
+      })
+
+      memberSelect.value = res
+
+    } catch (err) {
+      error.value = 'Gagal memuat data member'
+      console.error(err)
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     members,
     member,
+    memberSelect,
+
+    meta,
     familyMembers,
+    fetchMemberSelect,
     fetchAll,
     fetchById,
     fetchByKK,

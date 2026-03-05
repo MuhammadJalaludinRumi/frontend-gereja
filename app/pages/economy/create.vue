@@ -1,97 +1,48 @@
-<template>
-  <div class="p-6 w-full overflow-hidden" style="background: var(--ui-bg); color: var(--ui-text);">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Tambah Economy</h1>
-      <UButton to="/economy" icon="i-heroicons-arrow-left" color="neutral" variant="link" label="Kembali" />
-    </div>
-
-    <UCard>
-      <form @submit.prevent="save" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block mb-1 font-medium text-sm">Member</label>
-            <UInputMenu
-            v-model="form.member"
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-
-          <div>
-            <label class="block mb-1 font-medium text-sm">Update</label>
-            <UInput v-model="form.update" type="date" class="w-full"/>
-          </div>
-
-          <div>
-            <label class="block mb-1 font-medium text-sm">Class</label>
-            <USelect
-              v-model="form.class"
-              :items="[
-                { label: 'Miskin', value: 'miskin' },
-                { label: 'Rentan Miskin', value: 'rentan miskin' },
-                { label: 'Menuju Menengah', value: 'menuju menengah' },
-                { label: 'Menengah', value: 'menengah' },
-                { label: 'Atas', value: 'atas' },
-              ]"
-              class="w-full"
-            />
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton color="neutral" variant="link" label="Batal" @click="router.push('/economy')"
-            icon="i-heroicons-x-mark" />
-          <UButton type="submit" color="primary" :loading="saving" :disabled="saving" label="Simpan"
-            icon="i-heroicons-check-circle" />
-        </div>
-      </form>
-    </UCard>
-  </div>
-</template>
-
 <script setup lang="ts">
 definePageMeta({
   middleware: ['role'],
   roles: [4]
 })
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useEconomies } from '~/composables/useEconomies'
-import { useMembers } from '~/composables/useMembers'
+
+import DefaultForm from '~/layouts/default-form.vue'
+import DropdownMember from '~/components/member/DropdownMember.vue'
 
 const router = useRouter()
 const { create } = useEconomies()
-const { members, fetchAll: fetchMembers } = useMembers()
+const { memberSelect, fetchMemberSelect } = useMembers()
+
+const loading = ref(false)
 
 const saving = ref(false)
 const form = reactive({
-  member: { label: '', value: 0 },
+  member: 0,
   update: '',
   class: ''
 })
 
-const memberOptions = computed(() =>
-  members.value.map(member => ({
-    label: member.name,
-    value: member.id
-  }))
-)
+const fetchMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    return
+  }
 
-onMounted(fetchMembers)
+  loading.value = true
+  try {
+    await fetchMemberSelect({ search })
+  } finally {
+    loading.value = false
+  }
+}
 
 const save = async () => {
-  if (form.member.value === 0 || !form.update || !form.class) {
+  if (form.member === 0 || !form.update || !form.class) {
     alert('Semua field harus diisi')
     return
   }
 
   saving.value = true
   try {
-    await create({
-      member: form.member.value,
-      update: form.update,
-      class: form.class
-    })
+    await create(form)
     router.push('/economy')
   } catch (err) {
     console.error(err)
@@ -101,3 +52,51 @@ const save = async () => {
   }
 }
 </script>
+
+<template>
+  <DefaultForm title="Tambah Ekonomi">
+    <form @submit.prevent="save" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block mb-1 font-medium text-sm">Anggota<span class="text-error">*</span></label>
+          <DropdownMember
+            :member-items="memberSelect"
+            :loading="loading"
+            :selected="form.member"
+            @search="fetchMembers"
+            @update:selected="val => form.member = val ?? 0"
+          />
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-sm">Update<span class="text-error">*</span></label>
+          <UInput v-model="form.update" type="date" class="w-full" required/>
+        </div>
+
+        <div>
+          <label class="block mb-1 font-medium text-sm">Class<span class="text-error">*</span></label>
+          <USelect
+            v-model="form.class"
+            :items="[
+              { label: 'Miskin', value: 'miskin' },
+              { label: 'Rentan Miskin', value: 'rentan miskin' },
+              { label: 'Menuju Menengah', value: 'menuju menengah' },
+              { label: 'Menengah', value: 'menengah' },
+              { label: 'Atas', value: 'atas' },
+            ]"
+            class="w-full"
+            placeholder="Pilih Kelas"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <UButton color="neutral" variant="ghost" label="Batal" @click="router.push('/economy')"
+          icon="i-heroicons-x-mark" />
+        <UButton type="submit" color="primary" :loading="saving" :disabled="saving" label="Simpan"
+          icon="i-heroicons-check-circle" />
+      </div>
+    </form>
+  </DefaultForm>
+</template>

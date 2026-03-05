@@ -19,6 +19,13 @@ export const useMarriages = () => {
   const apiBase = useApiUrl()
   const marriages = ref<Marriage[]>([])
   const marriage = ref<Marriage | null>(null)
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
+
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -41,16 +48,28 @@ export const useMarriages = () => {
   }
 
   // Fetch All
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch('/marriages', {
+      const res: any = await $fetch('/marriages', {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include',
+        params
       })
+
       marriages.value = res?.data ?? res
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (err) {
       console.error(err)
       error.value = 'Gagal ngambil data pernikahan'
@@ -143,6 +162,7 @@ export const useMarriages = () => {
   return {
     marriages,
     marriage,
+    meta,
     fetchAll,
     fetchById,
     create,

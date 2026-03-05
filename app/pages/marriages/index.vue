@@ -1,171 +1,102 @@
-<template>
-  <div class="p-6 w-full overflow-hidden" style="color: var(--ui-text); background: var(--ui-bg);">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">
-        Daftar Pernikahan
-      </h1>
-      <UButton to="/marriages/create" icon="i-heroicons-plus-circle" size="md" color="primary"
-        label="Tambah Pernikahan" />
-    </div>
-
-    <!-- Table Card -->
-    <UCard class="relative z-0 overflow-hidden">
-      <div class="overflow-x-auto w-full">
-        <table class="min-w-full table-auto border-collapse" style="color: var(--ui-text);">
-          <thead style="background: var(--ui-bg-muted); border-bottom: 1px solid var(--ui-border);">
-            <tr>
-              <th v-for="head in tableHeaders" :key="head"
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-                style="color: var(--ui-text-highlighted);">
-                {{ head }}
-              </th>
-              <th class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap"
-                style="color: var(--ui-text-highlighted);">
-                Action
-              </th>
-            </tr>
-          </thead>
-
-          <tbody style="background: var(--ui-bg);">
-            <tr v-for="m in marriages" :key="m.id" class="transition-colors" :style="{
-              borderBottom: '1px solid var(--ui-border)',
-              background: 'var(--ui-bg)',
-            }" @mouseover="hover = m.id" @mouseleave="hover = null" :class="{ 'hovered-row': hover === m.id }">
-              <!-- Date -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ $formatDate(m.date) }}</td>
-
-              <!-- Bride -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <div class="flex flex-col">
-                  <span class="font-medium">{{ m.brideMember?.name || m.bride_name || '-' }}</span>
-                  <small v-if="m.brideMember" class="text-xs">ID: {{ m.brideMember.id }}</small>
-                </div>
-              </td>
-              <!-- Groom -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <div class="flex flex-col">
-                  <span class="font-medium">{{ m.groomMember?.name || m.groom_name || '-' }}</span>
-                  <small v-if="m.groomMember" class="text-xs">ID: {{ m.groomMember.id }}</small>
-                </div>
-              </td>
-              
-
-              <!-- Venue -->
-              <td class="px-3 py-3 text-sm max-w-55 truncate">{{ m.venue || '-' }}</td>
-
-              <!-- is_active (1 = pasangan saat ini, 0 = cerai hidup/cerai mati) -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <span :class="m.is_active ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
-                  {{ m.is_active ? 'Pasangan Saat Ini' : 'Cerai (tercatat)' }}
-                </span>
-                <div v-if="m.is_active === 0" class="text-xs text-muted mt-1">
-                  (0 = cerai hidup / cerai mati — per data)
-                </div>
-              </td>
-
-              <!-- Actions -->
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <div class="flex justify-center gap-2">
-                  <UButton :to="`/marriages/${m.id}`" icon="i-heroicons-pencil-square" size="xs" color="info"
-                    variant="soft" label="Edit" />
-                  <UButton @click.stop="openDeleteModal(m.id)" icon="i-heroicons-trash" size="xs" color="error"
-                    variant="soft" label="Delete" />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </UCard>
-
-    <!-- Delete Modal -->
-    <Teleport to="body">
-      <div v-if="isDeleteModalOpen" class="fixed inset-0 z-99999 flex items-center justify-center"
-        style="background: rgba(0,0,0,0.5);">
-        <UCard class="max-w-md w-full mx-4"
-          style="background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-border);">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold" style="color: var(--ui-text-highlighted);">
-                Konfirmasi Hapus
-              </h3>
-              <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid"
-                @click="isDeleteModalOpen = false" />
-            </div>
-          </template>
-
-          <div class="py-4">
-            <p style="color: var(--ui-text);">Yakin ingin menghapus data pernikahan ini?</p>
-            <p class="text-sm text-muted mt-2">ID: {{ selectedId }}</p>
-          </div>
-
-          <template #footer>
-            <div class="flex justify-end gap-3">
-              <UButton color="neutral" variant="soft" label="Batal" @click="isDeleteModalOpen = false" />
-              <UButton color="error" label="Hapus" @click="confirmDelete" />
-            </div>
-          </template>
-        </UCard>
-      </div>
-    </Teleport>
-  </div>
-</template>
-
 <script setup lang="ts">
+import DefaultList from '~/layouts/default-list.vue';
+
 definePageMeta({
   middleware: ['role'],
   roles: [4]
 })
 
-import { ref, onMounted } from 'vue'
-import { useMarriages } from '~/composables/useMarriages'
+const { marriages, meta, fetchAll, remove } = useMarriages()
+const loading = ref(true)
 
-const { marriages: marriagesRef, fetchAll, remove } = useMarriages()
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: 10
+})
 
-const marriages = ref<any[]>([])
-const hover = ref<string | null>(null)
-const isDeleteModalOpen = ref(false)
-const selectedId = ref<string>('')
+const search = ref('')
 
-const tableHeaders = [
-  'Tanggal', 'Istri', 'Suami', 'Lokasi',
-  'Status',
+watch(
+  (): [number, number, string] => [pagination.value.pageIndex, pagination.value.pageSize, search.value],
+  async ([pageIndex, pageSize, searchValue]: [number, number, string]) => {
+    loading.value = true
+    try {
+      await fetchAll({
+        page: pageIndex + 1,
+        per_page: pageSize,
+        search: searchValue
+      })
+    } finally {
+      loading.value = false
+    }
+  }
+)
+
+onMounted(async () => {
+  try {
+    await fetchAll({
+      page: pagination.value.pageIndex + 1,
+      per_page: pagination.value.pageSize,
+    })
+  } catch (err) {
+    console.error("Error fetching marriages:", err)
+  } finally {
+    loading.value = false
+  }
+})
+
+const columns = [
+  { header: '#', accessorKey: 'id', id: 'id',},
+  { header: 'Tanggal', accessorKey: 'date', id: 'date' },
+  { header: 'Istri', accessorKey: 'bride_name', id: 'bride_name', },
+  { header: 'Suami', accessorKey: 'groom_name', id: 'groom_name', },
+  { header: 'Lokasi', accessorKey: 'venue', id: 'venue', },
+  { header: 'Status', accessorKey: 'is_active', id: 'is_active', },
 ]
 
-const load = async () => {
-  try {
-    await fetchAll()
-    marriages.value = marriagesRef.value
-  } catch (err) {
-    console.error('Gagal memuat marriages:', err)
-    marriages.value = []
-  }
-}
-onMounted(load)
-
-const openDeleteModal = (id: string | number) => {
-  selectedId.value = String(id)
-  isDeleteModalOpen.value = true
+const handleDelete = async (row: any) => {
+  await remove(row.id)
+  await fetchAll()
 }
 
-const confirmDelete = async () => {
-  if (!selectedId.value) return
-  try {
-    await remove(selectedId.value)
-    isDeleteModalOpen.value = false
-    await load()
-  } catch (err) {
-    console.error('Gagal menghapus marriage:', err)
+const onSearch = async (query: string) => {
+  search.value = query
+
+  pagination.value = {
+    ...pagination.value,
+    pageIndex: 0
   }
 }
+
 </script>
 
-<style scoped>
-.hovered-row {
-  background: var(--ui-bg-muted) !important;
-}
-.text-muted {
-  color: rgba(255,255,255,0.6);
-}
-</style>
+<template>
+  <DefaultList title="Pernikahan">
+    <DataTable
+      type="Pernikahan"
+      :data="marriages"
+      :columns="columns"
+      :loading="loading"
+      :total="meta.total"
+      :pagination="pagination"
+      @update:pagination="pagination = $event"
+      @delete="handleDelete"
+      @search="onSearch"
+    >
+      <template #date-cell={row}>
+        {{ $formatDate(row.original.date) }}
+      </template>
+
+      <template #is_active-cell={row}>
+        <div class="text-sm">
+          <span :class="row.original.is_active ? 'text-success font-medium' : 'text-error font-medium'">
+            {{ row.original.is_active ? 'Pasangan Saat Ini' : 'Cerai (tercatat)' }}
+          </span>
+          <div v-if="row.original.is_active === 0" class="text-xs text-muted mt-1">
+            (0 = cerai hidup / cerai mati — per data)
+          </div>
+        </div>
+      </template>
+    </DataTable>
+  </DefaultList>
+</template>

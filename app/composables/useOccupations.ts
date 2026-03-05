@@ -2,10 +2,26 @@ import { ref, computed } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
+export interface Occupation {
+  id: number
+  member: number
+  company: string
+  position: string
+  year_start: number
+  year_end: number
+  member_data: Member
+}
+
 export const useOccupations = () => {
   const apiBase = useApiUrl()
-  const occupations = ref<any[]>([])
-  const occupation = ref<any>(null)
+  const occupations = ref<Occupation[]>([])
+  const occupation = ref<Occupation | null>(null)
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -25,16 +41,27 @@ export const useOccupations = () => {
     return headers
   }
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch('/occupations', {
+      const res: any = await $fetch('/occupations', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
-      occupations.value = res
+      occupations.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (err) {
       console.error(err)
       error.value = 'Gagal memuat data Occupations'
@@ -47,7 +74,7 @@ export const useOccupations = () => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch(`/occupations/${id}`, {
+      const res: any = await $fetch(`/occupations/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
@@ -107,5 +134,16 @@ export const useOccupations = () => {
     }
   }
 
-  return { occupations, occupation, fetchAll, fetchById, create, update, remove, loading, error }
+  return { 
+    occupations, 
+    occupation, 
+    meta,
+    fetchAll, 
+    fetchById, 
+    create, 
+    update, 
+    remove, 
+    loading, 
+    error 
+  }
 }
