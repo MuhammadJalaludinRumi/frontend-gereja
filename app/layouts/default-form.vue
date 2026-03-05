@@ -4,7 +4,7 @@ withDefaults(defineProps<{
   loading?: boolean
 }>(), {
   title: 'Data',
-  loading: true
+  loading: false
 })
 
 const router = useRouter()
@@ -27,7 +27,7 @@ const router = useRouter()
     </Header>
     
     <UCard>
-      <Loader v-if="loading" label="Form" />
+      <Loader v-if="loading" label="form" />
       <slot v-else/>
     </UCard>
 

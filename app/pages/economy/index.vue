@@ -81,6 +81,11 @@ const onSearch = async (query: string) => {
       @delete="handleDelete"
       @search="onSearch"
     >
+      <template #class-cell="{ row }">
+        <span class="capitalize">
+          {{ row.original.class }}
+        </span>
+      </template>
       <template #update-cell="{ row }">
         {{ $formatDate(row.original.update) }}
       </template>

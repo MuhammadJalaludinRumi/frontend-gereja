@@ -35,6 +35,8 @@ export const useMembers = () => {
   const members = ref<Member[]>([])
   const familyMembers = ref<Member[]>([])
   const member = ref<Member | null>(null)
+  const memberSelect = ref<{value: number, label: string}[]>([]) // untuk dropdown
+
   const meta = ref({
     total: 0,
     per_page: 10,
@@ -61,7 +63,6 @@ export const useMembers = () => {
     })
     return fd
   }
-
 
   // ======================
   // GET HEADERS (1:1 with ACLS)
@@ -279,11 +280,36 @@ export const useMembers = () => {
     }
   }
 
+  const fetchMemberSelect = async (params?: {id?: number, search?: string}) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const res: {value: number, label: string}[] = await $fetch('/members/select', {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include',
+        params
+      })
+
+      memberSelect.value = res
+
+    } catch (err) {
+      error.value = 'Gagal memuat data member'
+      console.error(err)
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     members,
     member,
+    memberSelect,
+
     meta,
     familyMembers,
+    fetchMemberSelect,
     fetchAll,
     fetchById,
     fetchByKK,

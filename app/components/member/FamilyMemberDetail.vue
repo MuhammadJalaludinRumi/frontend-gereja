@@ -103,7 +103,7 @@ const localOpen = computed({
                 <UAvatar :src="related.photo" size="lg" class="h-12 w-12" />
                 <div>
                   <h3 class="text-lg font-medium capitalize">{{ related.name }}</h3>
-                  <p class="text-sm text-muted">{{ related.family_relation }}</p>
+                  <p class="text-sm text-muted">Status keluarga: {{ related.family_relation }}</p>
                 </div>
               </div>
               <UButton 

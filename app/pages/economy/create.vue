@@ -3,55 +3,46 @@ definePageMeta({
   middleware: ['role'],
   roles: [4]
 })
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useEconomies } from '~/composables/useEconomies'
-import { useMembers } from '~/composables/useMembers'
+
 import DefaultForm from '~/layouts/default-form.vue'
+import DropdownMember from '~/components/member/DropdownMember.vue'
 
 const router = useRouter()
 const { create } = useEconomies()
-const { members, fetchAll: fetchMembers } = useMembers()
+const { memberSelect, fetchMemberSelect } = useMembers()
 
-const loading = ref(true)
+const loading = ref(false)
 
 const saving = ref(false)
 const form = reactive({
-  member: { label: '', value: 0 },
+  member: 0,
   update: '',
   class: ''
 })
 
-const memberOptions = computed(() =>
-  members.value.map(member => ({
-    label: member.name,
-    value: member.id
-  }))
-)
+const fetchMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    return
+  }
 
-onMounted(async () => {
+  loading.value = true
   try {
-    await fetchMembers()
-  } catch (err) {
-    console.log('Error fetching members', err)
+    await fetchMemberSelect({ search })
   } finally {
     loading.value = false
   }
-})
+}
 
 const save = async () => {
-  if (form.member.value === 0 || !form.update || !form.class) {
+  if (form.member === 0 || !form.update || !form.class) {
     alert('Semua field harus diisi')
     return
   }
 
   saving.value = true
   try {
-    await create({
-      member: form.member.value,
-      update: form.update,
-      class: form.class
-    })
+    await create(form)
     router.push('/economy')
   } catch (err) {
     console.error(err)
@@ -63,17 +54,17 @@ const save = async () => {
 </script>
 
 <template>
-  <DefaultForm title="Tambah Ekonomi" :loading="loading">
+  <DefaultForm title="Tambah Ekonomi">
     <form @submit.prevent="save" class="space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block mb-1 font-medium text-sm">Anggota<span class="text-error">*</span></label>
-          <UInputMenu
-          v-model="form.member"
-          :items="memberOptions"
-          class="w-full"
-          placeholder="Pilih Anggota"
-          required
+          <DropdownMember
+            :member-items="memberSelect"
+            :loading="loading"
+            :selected="form.member"
+            @search="fetchMembers"
+            @update:selected="val => form.member = val ?? 0"
           />
         </div>
 

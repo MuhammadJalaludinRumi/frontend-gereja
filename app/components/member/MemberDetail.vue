@@ -220,7 +220,7 @@ const openDetail = (member: Member) => {
                     <UAvatar :src="member.photo" size="lg" class="h-12 w-12" />
                     <div>
                       <h3 class="text-lg font-medium capitalize">{{ member.name }}</h3>
-                      <p class="text-sm text-muted">{{ member.family_relation }}</p>
+                      <p class="text-sm text-muted">Status keluarga: {{ member.family_relation ?? '-' }}</p>
                     </div>
                   </div>
                   <UButton 
