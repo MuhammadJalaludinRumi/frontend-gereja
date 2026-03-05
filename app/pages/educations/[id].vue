@@ -6,6 +6,7 @@ definePageMeta({
 
 import { ref, reactive, onMounted } from "vue"
 import { useRouter, useRoute } from "vue-router"
+import DropdownMember from '~/components/member/DropdownMember.vue'
 import { useEducations } from "~/composables/useEducations"
 import { useMembers } from "~/composables/useMembers"
 import DefaultForm from '~/layouts/default-form.vue'
@@ -14,43 +15,33 @@ const router = useRouter()
 const route = useRoute()
 const id = Number(route.params.id)
 
-const { fetchById, update, education, loading: eduLoading } = useEducations()
-const { members, fetchAll: fetchMembers } = useMembers()
+const { fetchById, update, education } = useEducations()
+const { memberSelect, fetchMemberSelect, loading: memberLoading } = useMembers()
+const currentMemberSelect = ref<{ value: number, label: string } >({ value: 0, label: '' })
 
 const loading = ref(true)
 const saving = ref(false)
 const serverError = ref<string | null>(null)
 
-const memberInput = ref({ label: '', value: 0 })
-
 const form = reactive({
-  member: "" as string | number,
+  member: 0,
   level: "",
   institution: "",
   major: "",
   year_graduate: ""
 })
 
-const memberOptions = computed<{ label: string; value: number }[]>(() =>
-  members.value
-    .filter(m => typeof m.id === 'number')
-    .map(m => ({
-      label: m.name,
-      value: m.id!
-    }))
-)
-
 onMounted(async () => {
   try {
-    await fetchMembers()
-    
     await fetchById(id)
     
     if (education.value) {
       Object.assign(form, education.value)
     }
 
-    memberInput.value = memberOptions.value.find(m => m.value === education.value?.member) || { label: '', value: 0 }
+    await fetchMemberSelect({id: form.member})
+    currentMemberSelect.value = memberSelect.value?.[0] ?? { value: 0, label: '' }
+
   } catch (err) {
     console.error(err)
     serverError.value = "Gagal memuat data."
@@ -59,14 +50,26 @@ onMounted(async () => {
   }
 })
 
+const fetchMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    return
+  }
+
+  memberLoading.value = true
+  try {
+    await fetchMemberSelect({ search })
+  } finally {
+    memberLoading.value = false
+  }
+}
+
 const save = async () => {
   serverError.value = null
   if (!form.member || !form.level || !form.institution) {
     serverError.value = "Member, Jenjang, dan Institusi wajib diisi."
     return
   }
-
-  form.member = memberInput.value.value
 
   saving.value = true
   try {
@@ -84,29 +87,33 @@ const save = async () => {
 <template>
   <DefaultForm title="Edit Pendidikan" :loading="loading">
     <form @submit.prevent="save" class="space-y-6">
-      <!-- Member -->
-      <div>
-        <label class="block mb-2 text-sm font-semibold">Pilih Member <span class="text-red-500">*</span></label>
-        <UInputMenu v-model="memberInput" :items="memberOptions" placeholder="Cari member..." class="w-full" :loading="loading"/>
-      </div>
-
-      <!-- Level, Institution, Major, Year -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
+          <label class="block mb-2 text-sm font-semibold">Pilih Member <span class="text-red-500">*</span></label>
+          <DropdownMember
+            :member-items="memberSelect"
+            :loading="memberLoading"
+            :selected="currentMemberSelect?.value"
+            :selected-label="currentMemberSelect?.label"
+            @search="fetchMembers"
+            @update:selected="(val: number) => form.member = val ?? 0"
+          />
+        </div>
+        <div>
           <label class="block mb-2 text-sm font-semibold">Jenjang Pendidikan <span class="text-red-500">*</span></label>
-          <USelect v-model="form.level" :items="['TK', 'SD', 'SMP', 'SMA', 'D1', 'D2', 'D3', 'S1', 'S2', 'S3'].map(l => ({ label: l, value: l }))" placeholder="Pilih jenjang..." class="w-full mt-2" />
+          <USelect v-model="form.level" :items="['TK', 'SD', 'SMP', 'SMA', 'D1', 'D2', 'D3', 'S1', 'S2', 'S3']" placeholder="Pilih jenjang..." class="w-full" required />
         </div>
         <div>
           <label class="block mb-2 text-sm font-semibold">Institusi <span class="text-red-500">*</span></label>
-          <UInput v-model="form.institution" type="text" placeholder="Contoh: Universitas Brawijaya" class="w-full mt-2" />
+          <UInput v-model="form.institution" type="text" placeholder="Contoh: Universitas Brawijaya" class="w-full" required />
         </div>
         <div>
           <label class="block mb-2 text-sm font-semibold">Jurusan</label>
-          <UInput v-model="form.major" type="text" placeholder="Contoh: Teknik Informatika" class="w-full mt-2" />
+          <UInput v-model="form.major" type="text" placeholder="Contoh: Teknik Informatika" class="w-full" />
         </div>
         <div>
           <label class="block mb-2 text-sm font-semibold">Tahun Lulus</label>
-          <UInput v-model="form.year_graduate" type="number" placeholder="Contoh: 2021" class="w-full mt-2" />            
+          <UInput v-model="form.year_graduate" type="number" placeholder="Contoh: 2021" class="w-full" />            
         </div>
       </div>
 

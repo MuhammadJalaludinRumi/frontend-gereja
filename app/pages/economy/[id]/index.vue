@@ -17,7 +17,7 @@ const id = Number(route.params.id)
 
 const { economy, fetchById, update, loading } = useEconomies()
 const { memberSelect, fetchMemberSelect } = useMembers()
-const currentMemberSelect = ref<{ value: number, label: string } | null >({ value: 0, label: '' })
+const currentMemberSelect = ref<{ value: number, label: string }>({ value: 0, label: '' })
 
 const saving = ref(false)
 const loadingData = ref(true)
@@ -37,7 +37,7 @@ onMounted(async () => {
     form.class = economy.value?.class ?? ''
     
     await fetchMemberSelect({ id: form.member })
-    currentMemberSelect.value = memberSelect.value?.[0] ?? null
+    currentMemberSelect.value = memberSelect.value?.[0] ?? { value: 0, label: '' }
   } catch (err) {
     console.error('Failed to Fetch', err)
   } finally {
@@ -101,8 +101,8 @@ const updateData = async () => {
           <DropdownMember
             :member-items="memberSelect"
             :loading="loading"
-            :selected="form.member"
-            :selected-label="economy?.member.name"
+            :selected="currentMemberSelect?.value"
+            :selected-label="currentMemberSelect?.label"
             @search="fetchMembers"
             @update:selected="(val: number) => form.member = val ?? 0"
           />

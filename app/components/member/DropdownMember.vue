@@ -19,11 +19,23 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:selected', value: number): void
+  (e: 'update:selected-object', value: { value: number, label: string }): void
   (e: 'search', value: string): void
 }>()
 
 const selectedMemberId = ref<number>(props.selected)
 const selectedMember = ref<{value: number, label: string}>({value: props.selected, label: props.selectedLabel})
+
+watch(
+  () => [props.selected, props.selectedLabel],
+  ([value, label]) => {
+    selectedMember.value = {
+      value: Number(value) ?? 0,
+      label: String(label) ?? ''
+    }
+  },
+  { immediate: true }
+)
 
 const searchTerm = ref('')
 
@@ -37,7 +49,9 @@ const emitSearch = useDebounceFn((value: string) => {
 
 watch(selectedMember, () => {
   selectedMemberId.value = selectedMember.value?.value
-  emit('update:selected', selectedMemberId.value)
+
+  emit('update:selected', selectedMemberId.value) // return number
+  emit('update:selected-object', selectedMember.value) //return object
 })
 </script>
 
@@ -62,7 +76,7 @@ watch(selectedMember, () => {
         Data anggota tidak ditemukan
       </span>
 
-      <span v-else>
+      <span v-else class="text-primary">
         Mulai mengetik untuk mencari
       </span>
     </template>

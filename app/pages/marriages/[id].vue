@@ -4,22 +4,27 @@ definePageMeta({
   roles: [4],
 })
 
-import { ref, reactive, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useMembers } from '~/composables/useMembers'
-import { useMarriages } from '~/composables/useMarriages'
-import { f } from 'vue-router/dist/router-CWoNjPRp.mjs'
+import DropdownMember from '~/components/member/DropdownMember.vue'
 import DefaultForm from '~/layouts/default-form.vue'
 
 const router = useRouter()
 const route = useRoute()
 
-const { members, fetchAll: fetchMembers } = useMembers()
 const { marriage, fetchById, update, loading: loadingMarriage, error: marriageError } = useMarriages()
+const { memberSelect, fetchMemberSelect } = useMembers()
 
-const loading = ref(true)
+const loading = ref({
+  bride: false,
+  groom: false,
+  priest: false,
+})
+
 const saving = ref(false)
 const serverError = ref<string | null>(null)
+
+const brideMembers = ref<{ label: string, value: number }[]>([])
+const groomMembers = ref<{ label: string, value: number }[]>([])
+const priestMembers = ref<{ label: string, value: number }[]>([])
 
 const isBrideMember = ref(true);
 const isGroomMember = ref(true);
@@ -37,31 +42,101 @@ const form = reactive({
   is_active: 1,
 })
 
+const fetchBrideMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    brideMembers.value = []
+    return
+  }
+
+  loading.value.bride = true
+  try {
+    await fetchMemberSelect({ search })
+    brideMembers.value = memberSelect.value
+  } finally {
+    loading.value.bride = false
+  }
+}
+const fetchGroomMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    groomMembers.value = []
+    return
+  }
+
+  loading.value.groom = true
+  try {
+    await fetchMemberSelect({ search })
+    groomMembers.value = memberSelect.value
+  } finally {
+    loading.value.groom = false
+  }
+}
+const fetchPriestMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    groomMembers.value = []
+    return
+  }
+
+  loading.value.priest = true
+  try {
+    await fetchMemberSelect({ search })
+    priestMembers.value = memberSelect.value
+  } finally {
+    loading.value.priest = false
+  }
+}
+
 // Load members & marriage detail
-const loadData = async () => {
-  loading.value = true
+onMounted(async () => {
+  loadingMarriage.value = true
   serverError.value = null
 
   try {
-    await fetchMembers()
     const id = Number(route.params.id)
     await fetchById(id)
+    
     if (marriage.value) {
-      form.bride.value = marriage.value.bride ?? 0
-      form.bride.label = members.value.find(m => m.id === marriage.value?.bride)?.name || ''
+      if (marriage.value.bride) {
+        form.bride.value = marriage.value.bride ?? 0
+        form.bride.label = marriage.value.bride_name ?? '' 
+
+        brideMembers.value = [{
+          label: form.bride.label,
+          value: form.bride.value,
+        }]
+      }
       form.bride_name = marriage.value.bride_name
       
-      form.groom.value = marriage.value.groom ?? 0
-      form.groom.label = members.value.find(m => m.id === marriage.value?.groom)?.name || ''
+      if (marriage.value.groom) {
+        form.groom.value = marriage.value.groom ?? 0
+        form.groom.label = marriage.value.groom_name ?? ''
+        
+        groomMembers.value = [{
+          label: form.groom.label,
+          value: form.groom.value,
+        }]
+      }
+
       form.groom_name = marriage.value.groom_name
 
-      form.priest.value = marriage.value.priest ?? 0
+      if (marriage.value.priest) {
+        form.priest.value = marriage.value.priest ?? 0
+        form.priest.label = marriage.value.priest_name ?? ''
+        
+        priestMembers.value = [{
+          label: form.priest.label,
+          value: form.priest.value,
+        }]
+      }
       form.priest_name = marriage.value.priest_name
-      form.priest.label = members.value.find(m => m.id === marriage.value?.priest)?.name || ''
 
       form.date = $formatDateForInput(marriage.value.date)
       form.venue = marriage.value.venue ?? ''
       form.is_active = Number(marriage.value.is_active) ?? 1
+      
+      console.log(form)
     }
 
     isBrideMember.value = !!marriage.value?.bride
@@ -71,20 +146,9 @@ const loadData = async () => {
     console.error('Gagal load data marriage:', err)
     serverError.value = 'Gagal load data marriage.'
   } finally {
-    loading.value = false
+    loadingMarriage.value = false
   }
-}
-
-const memberOptions = computed<{ label: string; value: number }[]>(() =>
-  members.value
-    .filter(m => typeof m.id === 'number')
-    .map(m => ({
-      label: m.name,
-      value: m.id!
-    }))
-)
-
-onMounted(loadData)
+})
 
 // SAVE / UPDATE FUNCTION
 const save = async () => {
@@ -125,7 +189,7 @@ const save = async () => {
 </script>
 
 <template>
-  <DefaultForm title="Tambah Pernikahan" :loading="loading">
+  <DefaultForm title="Edit Pernikahan" :loading="loadingMarriage">
     <form @submit.prevent="save" class="space-y-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Bride -->
@@ -135,13 +199,16 @@ const save = async () => {
             <span :hidden="isBrideMember">(Bukan Anggota)</span>
           </label>
           <div v-if="isBrideMember" class="flex gap-2 items-center">
-            <UInputMenu
-              v-model="form.bride"
-              :items="memberOptions"
-              :loading="loading"
-              @change="form.bride_name = form.bride.label"
-              placeholder="Pilih anggota (kalau istri anggota)"
-              class="w-full"
+            <DropdownMember
+              :member-items="brideMembers"
+              :loading="loading.bride"
+              :selected="form.bride.value"
+              :selected-label="form.bride.label"
+              @search="fetchBrideMembers"
+              @update:selected-object="(member) => {
+                form.bride = member
+                form.bride_name = member.label
+              }"
             />
 
             <UButton
@@ -179,13 +246,16 @@ const save = async () => {
             <span :hidden="isGroomMember">(Bukan Anggota)</span>
           </label>
           <div v-if="isGroomMember" class="flex gap-2 items-center">
-            <UInputMenu
-              v-model="form.groom"
-              :items="memberOptions"
-              :loading="loading"
-              @change="form.groom_name = form.groom.label"
-              placeholder="Pilih anggota (kalau suami anggota)"
-              class="w-full"
+            <DropdownMember
+              :member-items="groomMembers"
+              :loading="loading.groom"
+              :selected="form.groom.value"
+              :selected-label="form.groom.label"
+              @search="fetchGroomMembers"
+              @update:selected-object="(member: { value: number, label: string }) => {
+                form.groom = member
+                form.groom_name = member.label
+              }"
             />
 
             <UButton
@@ -244,14 +314,18 @@ const save = async () => {
           <span :hidden="isPriestMember">(Bukan Anggota)</span>
         </label>
         <div v-if="isPriestMember" class="flex gap-2 items-center">
-          <UInputMenu
-            v-model="form.priest"
-            :items="memberOptions"
-            :loading="loading"
-            @change="form.priest_name = form.priest.label"
-            placeholder="Pilih pelayan (kalau anggota)"
-            class="w-full"
+          <DropdownMember
+            :member-items="priestMembers"
+            :loading="loading.priest"
+            :selected="form.priest.value"
+            :selected-label="form.priest.label"
+            @search="fetchPriestMembers"
+            @update:selected-object="(member: { value: number, label: string }) => {
+              form.priest = member
+              form.priest_name = member.label
+            }"
           />
+
           <UButton
             type="button"
             color="primary"

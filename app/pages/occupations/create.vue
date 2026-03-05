@@ -3,34 +3,41 @@ definePageMeta({
   middleware: ['role'],
   roles: [4]
 })
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useOccupations } from '~/composables/useOccupations'
-import { useMembers } from '~/composables/useMembers'
+
 import DefaultForm from '~/layouts/default-form.vue'
+import DropdownMember from '~/components/member/DropdownMember.vue'
 
 const router = useRouter()
 const { create } = useOccupations()
-const { members, fetchAll: fetchMembers, loading } = useMembers()
+const { memberSelect, fetchMemberSelect, loading } = useMembers()
 
 const saving = ref(false)
 
-const memberInput = ref({ label: '', value: 0 })
-
 const form = reactive({
-  member: 0 as number | string,
+  member: 0,
   company: '',
   position: '',
   year_start: '',
   year_end: ''
 })
 
-onMounted(fetchMembers)
+const fetchMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    return
+  }
+
+  loading.value = true
+  try {
+    await fetchMemberSelect({ search })
+  } finally {
+    loading.value = false
+  }
+}
 
 const save = async () => {
   saving.value = true
 
-  form.member = memberInput.value.value
   try {
     await create(form)
     router.push('/occupations')
@@ -44,20 +51,18 @@ const save = async () => {
 </script>
 
 <template>
-  <DefaultForm title="Tambah Pekerjaan" :loading="loading">
+  <DefaultForm title="Tambah Pekerjaan">
     <form @submit.prevent="save" class="space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block mb-1 font-semibold text-sm">Anggota <span class="text-red-500">*</span></label>
-          <UInputMenu 
-            v-model="memberInput" 
-            :items="members.map(m => ({ label: m.name, value: m.id }))" 
-            placeholder="Pilih Anggota..." 
-            class="w-full" 
+          <DropdownMember
+            :member-items="memberSelect"
             :loading="loading"
-            required
+            :selected="form.member"
+            @search="fetchMembers"
+            @update:selected="val => form.member = val ?? 0"
           />
-
         </div>
         <div>
           <label class="block mb-1 font-semibold text-sm">Perusahaan  <span class="text-red-500">*</span></label>

@@ -1,26 +1,23 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['role'], roles: [4] })
 
-import { ref, reactive, onMounted } from "vue"
-import { useRouter, useRoute } from "vue-router"
-import { useOccupations } from "~/composables/useOccupations"
-import { useMembers } from "~/composables/useMembers"
+import DropdownMember from '~/components/member/DropdownMember.vue'
 import DefaultForm from '~/layouts/default-form.vue'
 
 const router = useRouter()
 const route = useRoute()
 
 const { occupation, fetchById, update } = useOccupations()
-const { members, fetchAll: fetchMembers } = useMembers()
+const { memberSelect, fetchMemberSelect, loading: memberLoading } = useMembers()
+const currentMemberSelect = ref<{ value: number, label: string } >({ value: 0, label: '' })
 
 const loading = ref(true)
 const saving = ref(false)
 const errorMessage = ref<string | null>(null)
 
-const memberInput = ref<{ label: string; value: number }>({ label: "", value: 0 })
 
 const form = reactive({
-  member: 0 as number | string,
+  member: 0,
   company: "",
   position: "",
   year_start: 0,
@@ -30,7 +27,7 @@ const form = reactive({
 onMounted(async () => {
   try {
     const id = Number(route.params.id)
-    await Promise.all([fetchMembers(), fetchById(id)])
+    await fetchById(id)
 
     if (occupation.value) {
       form.member = occupation.value.member
@@ -40,10 +37,9 @@ onMounted(async () => {
       form.year_end = occupation.value.year_end
     }
     
-    const memberData = members.value.find(m => m.id === occupation.value?.member)
-    if (memberData) {
-      memberInput.value = { label: memberData.name, value: Number(memberData.id) }
-    }
+    await fetchMemberSelect({id: form.member })
+    currentMemberSelect.value = memberSelect.value?.[0] ?? { value: 0, label: '' }
+
   } catch (err) {
     errorMessage.value = "Gagal ambil data, mampus kita wkwk."
   } finally {
@@ -51,9 +47,23 @@ onMounted(async () => {
   }
 })
 
+const fetchMembers = async (search: string) => {
+  if (!search || search.length < 3) {
+    memberSelect.value = []
+    return
+  }
+
+  memberLoading.value = true
+  try {
+    await fetchMemberSelect({ search })
+  } finally {
+    memberLoading.value = false
+  }
+}
+
 const save = async () => {
   saving.value = true
-  form.member = memberInput.value.value
+
   try {
     await update(Number(route.params.id), form)
     router.push("/occupations")
@@ -73,13 +83,13 @@ const save = async () => {
         <!-- MEMBER -->
         <div>
           <label class="block mb-2 text-sm font-semibold">Anggota <span class="text-red-500">*</span></label>
-          <UInputMenu 
-            v-model="memberInput" 
-            :items="members.map(m => ({ label: m.name, value: m.id }))" 
-            placeholder="Pilih Anggota..." 
-            class="w-full" 
-            :loading="loading"
-            required
+          <DropdownMember
+            :member-items="memberSelect"
+            :loading="memberLoading"
+            :selected="currentMemberSelect?.value"
+            :selected-label="currentMemberSelect?.label"
+            @search="fetchMembers"
+            @update:selected="(val: number) => form.member = val ?? 0"
           />
         </div>
 
