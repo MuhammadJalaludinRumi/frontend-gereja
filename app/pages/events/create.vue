@@ -4,39 +4,99 @@ definePageMeta({
   roles: [4]
 })
 
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import DropdownMember from '~/components/member/DropdownMember.vue'
+import DefaultForm from '~/layouts/default-form.vue'
 
 const router = useRouter()
-const { members, fetchAll } = useMembers()
-const { create, loading } = useEvent()
+const { memberSelect, fetchMemberSelect } = useMembers()
+const { create } = useEvent()
 
 const saving = ref(false)
 const formError = ref<string | null>(null)
 
-onMounted(fetchAll)
+const loading = ref({
+  serviceMinistry: false,
+  coordinator: false,
+  liturgist: false,
+  pfAssistant: false,
+  musician: false,
+  worshipLeader: false,
+  offeringOfficer: false,
+  choir: false,
+})
 
-const memberOptions = computed(() =>
-  members.value.map(member => ({
-    label: member.name,
-    value: member.id
-  }))
-)
+const items = ref({
+  serviceMinistry: [] as { label: string; value: number }[], 
+  coordinator: [] as { label: string; value: number }[],
+  liturgist: [] as { label: string; value: number }[], 
+  pfAssistant: [] as { label: string; value: number }[], 
+  musician: [] as { label: string; value: number }[], 
+  worshipLeader: [] as { label: string; value: number }[], 
+  offeringOfficer: [] as { label: string; value: number }[], 
+  choir: [] as { label: string; value: number }[], 
+})
+
+const fetchMembers = async (key: keyof typeof items.value, search: string) => {
+  if (!search || search.length < 3) {
+    items.value[key] = []
+    return
+  }
+
+  loading.value[key] = true
+
+  try {
+    await fetchMemberSelect({ search })
+
+    items.value[key] = memberSelect.value.map((member) => ({
+      label: member.label,
+      value: member.value
+    }))
+  } finally {
+    loading.value[key] = false
+  }
+}
+
+const fetchMultipleMembers = async (key: keyof typeof items.value, search: string) => {
+  if (!search || search.length < 3) {
+    items.value[key] = []
+    return
+  }
+
+  loading.value[key] = true
+
+  try {
+    await fetchMemberSelect({ search })
+
+    const newItems = memberSelect.value.map((member) => ({
+      label: member.label,
+      value: member.value
+    }))
+
+    const merged = [...items.value[key], ...newItems]
+
+    items.value[key] = merged.filter(
+      (item, index, self) =>
+        index === self.findIndex((i) => i.value === item.value)
+    )
+  } finally {
+    loading.value[key] = false
+  }
+}
 
 const form = ref({
   service_type: '',
   service_date: '',
   service_time: '',
 
-  service_ministry: undefined as { label: string; value: number } | undefined,
+  service_ministry: { label: '', value: 0 },
 
   scripture_reading: '',
   sermon_text: '',
   sermon_theme: '',
 
-  coordinator: undefined as { label: string; value: number } | undefined,
-  liturgist: undefined as { label: string; value: number } | undefined,
-  pf_assistant: undefined as { label: string; value: number } | undefined,
+  coordinator: { label: '', value: 0 },
+  liturgist: { label: '', value: 0 },
+  pf_assistant: { label: '', value: 0 },
 
   musician: [] as { label: string; value: number }[],
   worship_leader: [] as { label: string; value: number }[],
@@ -179,254 +239,274 @@ const submit = async () => {
 </script>
 
 <template>
-  <div class="p-6 w-full" style="color: var(--ui-text); background: var(--ui-bg)">
-    <h1 class="text-2xl font-bold mb-6" style="color: var(--ui-text-highlighted)">
-      Tambah Agenda Baru
-    </h1>
-
-    <UCard>
-      <form @submit.prevent="submit" class="space-y-5">
-        <div class="grid grid-cols-2 space-y-3 gap-x-4">
-          <h1 class="text-xl font-medium col-span-2">Informasi Agenda</h1>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Jenis Kebaktian</label>
-            <USelect
-              v-model="form.service_type"
-              :items="[
-                { label: 'Umum', value: 'Umum' },
-                { label: 'KRT', value: 'KRT' },
-                { label: 'Pemuda Remaja', value: 'Pemuda Remaja' },
-                { label: 'Sekolah Minggu', value: 'Sekolah Minggu' },
-                { label: 'Pria', value: 'Pria' },
-                { label: 'Lansia', value: 'Lansia' },
-                { label: 'Perempuan', value: 'Perempuan' },
-                { label: 'Perayaan HRG', value: 'Perayaan HRG' },
-                { label: 'Lain-lain', value: 'Lain-lain' },
-              ]"
-              class="w-full"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Pelayan Kebaktian</label>
-            <UInputMenu
-              v-model="form.service_ministry"
-              :items="memberOptions"
-              class="w-full"
-            />
-          </div>
-
-          <div>
-            <label class="block mb-1 text-sm font-medium">Tanggal</label>
-            <UInput v-model="form.service_date" type="date" class="w-full"/>
-          </div>
-
-          <div>
-            <label class="block mb-1 text-sm font-medium">Waktu</label>
-            <UInput v-model="form.service_time" type="time" class="w-full"/>
-          </div>
-
-          <USeparator  class="col-span-2"/>
+  <DefaultForm title="Tambah Agenda">
+    <form @submit.prevent="submit" class="space-y-5">
+      <div class="grid grid-cols-2 space-y-3 gap-x-4">
+        <h1 class="text-xl font-medium col-span-2">Informasi Agenda</h1>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Jenis Kebaktian <Mandatory/></label>
+          <USelect
+            v-model="form.service_type"
+            :items="[
+              { label: 'Umum', value: 'Umum' },
+              { label: 'KRT', value: 'KRT' },
+              { label: 'Pemuda Remaja', value: 'Pemuda Remaja' },
+              { label: 'Sekolah Minggu', value: 'Sekolah Minggu' },
+              { label: 'Pria', value: 'Pria' },
+              { label: 'Lansia', value: 'Lansia' },
+              { label: 'Perempuan', value: 'Perempuan' },
+              { label: 'Perayaan HRG', value: 'Perayaan HRG' },
+              { label: 'Lain-lain', value: 'Lain-lain' },
+            ]"
+            class="w-full"
+            placeholder="Pilih Jenis Kebaktian"
+            required
+          />
         </div>
         
-        <div class="grid grid-cols-2 space-y-3 gap-x-4">
-          <h1 class="text-xl font-medium col-span-2">Liturgi & Khotbah</h1>
-
-          <div>
-            <label class="block mb-1 text-sm font-medium">Pembacaan Alkitab</label>
-            <UInput v-model="form.scripture_reading" placeholder="Masukkan pembacaan Alkitab" class="w-full"/>
-          </div>
-  
-          <div>
-            <label class="block mb-1 text-sm font-medium">Nats Khotbah</label>
-            <UInput v-model="form.sermon_text" placeholder="Masukkan nats khotbah" class="w-full"/>
-          </div>
-  
-          <div>
-            <label class="block mb-1 text-sm font-medium">Tema</label>
-            <UInput v-model="form.sermon_theme" placeholder="Masukkan tema" class="w-full"/>
-          </div>
-
-          <USeparator  class="col-span-2"/>
-        </div>
-
-        <div class="grid grid-cols-2 space-y-3 gap-x-4">
-          <h1 class="text-xl font-medium col-span-2">Pelayan Utama</h1>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Koordinator</label>
-            <UInputMenu
-            v-model="form.coordinator"
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Liturgos</label>
-            <UInputMenu
-            v-model="form.liturgist"
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Pendamping PF</label>
-            <UInputMenu
-            v-model="form.pf_assistant"
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-
-          <USeparator class="col-span-2" />
-        </div>
-        
-        <div class="grid grid-cols-2 space-y-3 gap-x-4">
-          <h1 class="text-xl font-medium col-span-2">Pelayan Tim</h1>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Pemusik</label>
-            <UInputMenu
-            v-model="form.musician"
-            multiple
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Pemandu Pujian</label>
-            <UInputMenu
-            v-model="form.worship_leader"
-            multiple
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Petugas Persembahan</label>
-            <UInputMenu
-            v-model="form.offering_officer"
-            multiple
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Paduan Suara</label>
-            <UInputMenu
-            v-model="form.choir"
-            multiple
-            :items="memberOptions"
-            class="w-full"
-            />
-          </div>
-          
-          <USeparator class="col-span-2" />
-        </div>
-
-        <div class="grid grid-cols-2 space-y-3 gap-x-4">
-          <h1 class="text-xl font-medium col-span-2">Kehadiran Jemaat</h1>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Jumlah Hadir (Pria)</label>
-            <UInput 
-            v-model="form.male_attendance" 
-            placeholder="Masukkan jumlah hadir (Pria)" 
-            class="w-full" 
-            type="number" 
-            min="0" 
-            @input="form.male_attendance = Math.max(0, Number(form.male_attendance || 0))" 
-            @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Jumlah Hadir (Wanita)</label>
-            <UInput 
-            v-model="form.female_attendance" 
-            placeholder="Masukkan jumlah hadir (Wanita)" 
-            class="w-full" 
-            type="number" 
-            min="0" 
-            @input="form.female_attendance = Math.max(0, Number(form.female_attendance || 0))" 
-            @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
-            />
-          </div>
-
-          <USeparator class="col-span-2" />
-        </div>
-        
-        <div class="grid grid-cols-2 space-y-3 gap-x-4">
-          <h1 class="text-xl font-medium col-span-2">Persembahan</h1>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Persembahan (Amplop Merah)</label>
-            <UInput 
-            v-model="form.red_envelope" 
-            placeholder="Masukkan persembahan (amplop merah)" 
-            class="w-full" 
-            type="number" 
-            min="0" 
-            @input="form.red_envelope = Math.max(0, Number(form.red_envelope || 0))" 
-            @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Persembahan (Amplop Biru)</label>
-            <UInput 
-            v-model="form.blue_envelope" 
-            placeholder="Masukkan persembahan (amplop biru)" 
-            class="w-full" 
-            type="number" 
-            min="0" 
-            @input="form.blue_envelope = Math.max(0, Number(form.blue_envelope || 0))" 
-            @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
-            />
-          </div>
-          
-          <div>
-            <label class="block mb-1 text-sm font-medium">Persembahan (Amplop Lainnya)</label>
-            <UInput 
-            v-model="form.other_envelope" 
-            placeholder="Masukkan persembahan (amplop lainnya)" 
-            class="w-full" 
-            type="number" 
-            min="0" 
-            @input="form.other_envelope = Math.max(0, Number(form.other_envelope || 0))" 
-            @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"/>
-          </div>
-
-          <USeparator class="col-span-2" />
+        <div>
+          <label class="block mb-1 text-sm font-medium">Pelayan Kebaktian <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.serviceMinistry"
+            :loading="loading.serviceMinistry"
+            :selected="form.service_ministry.value"
+            @search="(q) => fetchMembers('serviceMinistry', q)"
+            @update:selected-object="(member: any) => { form.service_ministry = member }"
+            placeholder="Cari dan pilih anggota untuk Pelayan Kebaktian"
+          />
         </div>
 
         <div>
-          <label class="block mb-1 text-sm font-medium">Catatan</label>
-          <UTextarea v-model="form.note" class="w-full"></UTextarea>
+          <label class="block mb-1 text-sm font-medium">Tanggal <Mandatory/></label>
+          <UInput v-model="form.service_date" type="date" class="w-full" required/>
         </div>
 
-        <div class="flex justify-end gap-3 pt-4 col-span-2">
-          <UButton
-            color="neutral"
-            variant="soft"
-            label="Batal"
-            @click="router.push('/events')"
+        <div>
+          <label class="block mb-1 text-sm font-medium">Waktu <Mandatory/></label>
+          <UInput v-model="form.service_time" type="time" class="w-full" required/>
+        </div>
+
+        <USeparator class="col-span-2"/>
+      </div>
+      
+      <div class="grid grid-cols-2 space-y-3 gap-x-4">
+        <h1 class="text-xl font-medium col-span-2">Liturgi & Khotbah</h1>
+
+        <div>
+          <label class="block mb-1 text-sm font-medium">Pembacaan Alkitab <Mandatory/></label>
+          <UInput v-model="form.scripture_reading" placeholder="Masukkan pembacaan Alkitab" class="w-full" required/>
+        </div>
+
+        <div>
+          <label class="block mb-1 text-sm font-medium">Nats Khotbah <Mandatory/></label>
+          <UInput v-model="form.sermon_text" placeholder="Masukkan nats khotbah" class="w-full" required/>
+        </div>
+
+        <div>
+          <label class="block mb-1 text-sm font-medium">Tema <Mandatory/></label>
+          <UInput v-model="form.sermon_theme" placeholder="Masukkan tema" class="w-full" required/>
+        </div>
+
+        <USeparator  class="col-span-2"/>
+      </div>
+
+      <div class="grid grid-cols-2 space-y-3 gap-x-4">
+        <h1 class="text-xl font-medium col-span-2">Pelayan Utama</h1>
+        <div>
+          <label class="block mb-1 text-sm font-medium">Koordinator <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.coordinator"
+            :loading="loading.coordinator"
+            :selected="form.coordinator.value"
+            @search="(q) => fetchMembers('coordinator', q)"
+            @update:selected-object="(member: any) => { form.coordinator = member }"
+            placeholder="Cari dan pilih anggota untuk Koordinator"
           />
-          <UButton
-            type="submit"
-            :loading="saving || loading"
-            color="primary"
-            label="Simpan"
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Liturgos <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.liturgist"
+            :loading="loading.liturgist"
+            :selected="form.liturgist.value"
+            @search="(q) => fetchMembers('liturgist', q)"
+            @update:selected-object="(member: any) => { form.liturgist = member }"
+            placeholder="Cari dan pilih anggota untuk Liturgos"
+          />
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Pendamping PF <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.pfAssistant"
+            :loading="loading.pfAssistant"
+            :selected="form.pf_assistant.value"
+            @search="(q) => fetchMembers('pfAssistant', q)"
+            @update:selected-object="(member: any) => { form.pf_assistant = member }"
+            placeholder="Cari dan pilih anggota untuk Pendamping PF"
           />
         </div>
 
-        <!-- error -->
-        <p v-if="formError" class="text-red-500 text-sm mt-2">
-          {{ formError }}
-        </p>
-      </form>
-    </UCard>
-  </div>
+        <USeparator class="col-span-2" />
+      </div>
+      
+      <div class="grid grid-cols-2 space-y-3 gap-x-4">
+        <h1 class="text-xl font-medium col-span-2">Pelayan Tim</h1>
+        <div>
+          <label class="block mb-1 text-sm font-medium">Pemusik (Minimal 1) <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.musician"
+            :loading="loading.musician"
+            :multiple="true"
+            :selected-multiple="form.musician"
+            @search="(q) => fetchMultipleMembers('musician', q)"
+            @update:selected-multiple="(members) => form.musician = members"
+            placeholder="Cari dan pilih anggota untuk Pemusik"
+          />
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Pemandu Pujian (Minimal 1) <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.worshipLeader"
+            :loading="loading.worshipLeader"
+            :multiple="true"
+            :selected-multiple="form.worship_leader"
+            @search="(q) => fetchMultipleMembers('worshipLeader', q)"
+            @update:selected-multiple="(members) => form.worship_leader = members"
+            placeholder="Cari dan pilih anggota untuk Pemusik"
+          />
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Petugas Persembahan (Minimal 1) <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.offeringOfficer"
+            :loading="loading.offeringOfficer"
+            :multiple="true"
+            :selected-multiple="form.offering_officer"
+            @search="(q) => fetchMultipleMembers('offeringOfficer', q)"
+            @update:selected-multiple="(members) => form.offering_officer = members"
+            placeholder="Cari dan pilih anggota untuk Pemusik"
+          />
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Paduan Suara <Mandatory/></label>
+          <DropdownMember
+            :member-items="items.choir"
+            :loading="loading.choir"
+            :multiple="true"
+            :selected-multiple="form.choir"
+            @search="(q) => fetchMultipleMembers('choir', q)"
+            @update:selected-multiple="(members) => form.choir = members"
+            placeholder="Cari dan pilih anggota untuk Pemusik"
+          />
+        </div>
+        
+        <USeparator class="col-span-2" />
+      </div>
+
+      <div class="grid grid-cols-2 space-y-3 gap-x-4">
+        <h1 class="text-xl font-medium col-span-2">Kehadiran Jemaat</h1>
+        <div>
+          <label class="block mb-1 text-sm font-medium">Jumlah Hadir (Pria)</label>
+          <UInput 
+          v-model="form.male_attendance" 
+          placeholder="Masukkan jumlah hadir (Pria)" 
+          class="w-full" 
+          type="number" 
+          min="0" 
+          @input="form.male_attendance = Math.max(0, Number(form.male_attendance || 0))" 
+          @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
+          />
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Jumlah Hadir (Wanita)</label>
+          <UInput 
+          v-model="form.female_attendance" 
+          placeholder="Masukkan jumlah hadir (Wanita)" 
+          class="w-full" 
+          type="number" 
+          min="0" 
+          @input="form.female_attendance = Math.max(0, Number(form.female_attendance || 0))" 
+          @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
+          />
+        </div>
+
+        <USeparator class="col-span-2" />
+      </div>
+      
+      <div class="grid grid-cols-2 space-y-3 gap-x-4">
+        <h1 class="text-xl font-medium col-span-2">Persembahan</h1>
+        <div>
+          <label class="block mb-1 text-sm font-medium">Persembahan (Amplop Merah)</label>
+          <UInput 
+          v-model="form.red_envelope" 
+          placeholder="Masukkan persembahan (amplop merah)" 
+          class="w-full" 
+          type="number" 
+          min="0" 
+          @input="form.red_envelope = Math.max(0, Number(form.red_envelope || 0))" 
+          @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
+          />
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Persembahan (Amplop Biru)</label>
+          <UInput 
+          v-model="form.blue_envelope" 
+          placeholder="Masukkan persembahan (amplop biru)" 
+          class="w-full" 
+          type="number" 
+          min="0" 
+          @input="form.blue_envelope = Math.max(0, Number(form.blue_envelope || 0))" 
+          @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"
+          />
+        </div>
+        
+        <div>
+          <label class="block mb-1 text-sm font-medium">Persembahan (Amplop Lainnya)</label>
+          <UInput 
+          v-model="form.other_envelope" 
+          placeholder="Masukkan persembahan (amplop lainnya)" 
+          class="w-full" 
+          type="number" 
+          min="0" 
+          @input="form.other_envelope = Math.max(0, Number(form.other_envelope || 0))" 
+          @keydown="['-', '+', '.', ','].includes($event.key) && $event.preventDefault()"/>
+        </div>
+
+        <USeparator class="col-span-2" />
+      </div>
+
+      <div>
+        <label class="block mb-1 text-sm font-medium">Catatan</label>
+        <UTextarea v-model="form.note" class="w-full"></UTextarea>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4 col-span-2">
+        <UButton
+          color="neutral"
+          variant="soft"
+          label="Batal"
+          @click="router.push('/events')"
+        />
+        <UButton
+          type="submit"
+          :loading="saving"
+          color="primary"
+          label="Simpan"
+        />
+      </div>
+
+      <!-- error -->
+      <p v-if="formError" class="text-red-500 text-sm mt-2">
+        {{ formError }}
+      </p>
+    </form>
+  </DefaultForm>
 </template>
