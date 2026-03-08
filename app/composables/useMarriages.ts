@@ -6,12 +6,15 @@ export interface Marriage {
   id?: number
   bride?: number | null
   bride_name: string
+  bride_member: Member | null
   groom?: number | null
   groom_name: string
+  groom_member: Member | null
   date: string
   venue?: string | null
   priest?: number | null
   priest_name: string
+  priest_member: Member | null
   is_active?: number | boolean
 }
 
@@ -83,7 +86,7 @@ export const useMarriages = () => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch(`/marriages/${id}`, {
+      const res: any = await $fetch(`/marriages/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include',
@@ -101,7 +104,7 @@ export const useMarriages = () => {
   // Create
   const create = async (payload: Record<string, any>) => {
     try {
-      const res = await $fetch('/marriages', {
+      const res: any = await $fetch('/marriages', {
         baseURL: apiBase,
         method: 'POST',
         headers: getHeaders(),
@@ -122,7 +125,7 @@ export const useMarriages = () => {
   // Update
   const update = async (id: number | string, payload: Record<string, any>) => {
     try {
-      const res = await $fetch(`/marriages/${id}`, {
+      const res: any = await $fetch(`/marriages/${id}`, {
         baseURL: apiBase,
         method: 'PUT',
         headers: getHeaders(),

@@ -98,50 +98,38 @@ onMounted(async () => {
     await fetchById(id)
     
     if (marriage.value) {
-      if (marriage.value.bride) {
-        form.bride.value = marriage.value.bride ?? 0
-        form.bride.label = marriage.value.bride_name ?? '' 
-
-        brideMembers.value = [{
-          label: form.bride.label,
-          value: form.bride.value,
-        }]
-      }
+      form.bride.value = marriage.value.bride ?? 0
+      form.bride.label = marriage.value.bride_member?.name ?? ''
+      brideMembers.value = [{
+        label: form.bride.label,
+        value: form.bride.value,
+      }]
       form.bride_name = marriage.value.bride_name
       
-      if (marriage.value.groom) {
-        form.groom.value = marriage.value.groom ?? 0
-        form.groom.label = marriage.value.groom_name ?? ''
-        
-        groomMembers.value = [{
-          label: form.groom.label,
-          value: form.groom.value,
-        }]
-      }
-
+      form.groom.value = marriage.value.groom ?? 0
+      form.groom.label = marriage.value.groom_member?.name ?? ''
+      groomMembers.value = [{
+        label: form.groom.label,
+        value: form.groom.value,
+      }]
       form.groom_name = marriage.value.groom_name
 
-      if (marriage.value.priest) {
-        form.priest.value = marriage.value.priest ?? 0
-        form.priest.label = marriage.value.priest_name ?? ''
-        
-        priestMembers.value = [{
-          label: form.priest.label,
-          value: form.priest.value,
-        }]
-      }
+      form.priest.value = marriage.value.priest ?? 0
+      form.priest.label = marriage.value.priest_member?.name ?? ''
+      priestMembers.value = [{
+        label: form.priest.label,
+        value: form.priest.value,
+      }]
       form.priest_name = marriage.value.priest_name
 
       form.date = $formatDateForInput(marriage.value.date)
       form.venue = marriage.value.venue ?? ''
       form.is_active = Number(marriage.value.is_active) ?? 1
       
-      console.log(form)
+      isBrideMember.value = !!marriage.value?.bride
+      isGroomMember.value = !!marriage.value?.groom
+      isPriestMember.value = !!marriage.value?.priest
     }
-
-    isBrideMember.value = !!marriage.value?.bride
-    isGroomMember.value = !!marriage.value?.groom
-    isPriestMember.value = !!marriage.value?.priest
   } catch (err) {
     console.error('Gagal load data marriage:', err)
     serverError.value = 'Gagal load data marriage.'
@@ -215,7 +203,7 @@ const save = async () => {
               type="button"
               color="primary"
               variant="outline"
-              @click="form.bride = { label: '', value: 0 }; form.bride_name = ''; isBrideMember = false"
+              @click="form.bride = { label: '', value: 0 }; form.bride_name = marriage?.bride_name || ''; isBrideMember = false"
               label="Anggota"
             />
           </div>
@@ -230,7 +218,7 @@ const save = async () => {
               type="button"
               color="primary"
               variant="outline"
-              @click="form.bride = { label: marriage?.bride_name || '', value: marriage?.bride || 0 }; form.bride_name = ''; isBrideMember = true"
+              @click="form.bride = { label: marriage?.bride_member?.name || '', value: marriage?.bride || 0 }; form.bride_name = ''; isBrideMember = true"
               label="Bukan Anggota"
             />
           </div>
@@ -262,7 +250,7 @@ const save = async () => {
               type="button"
               color="primary"
               variant="outline"
-              @click="form.groom = { label: '', value: 0 }; form.groom_name = ''; isGroomMember = false"
+              @click="form.groom = { label: '', value: 0 }; form.groom_name = marriage?.groom_name || ''; isGroomMember = false"
               label="Anggota"
             />
           </div>
@@ -278,7 +266,7 @@ const save = async () => {
               type="button"
               color="primary"
               variant="outline"
-              @click="form.groom = { label: '', value: 0 }; form.groom_name = ''; isGroomMember = true"
+              @click="form.groom = { label: marriage?.groom_member?.name || '', value: marriage?.groom || 0 }; form.groom_name = ''; isGroomMember = true"
               label="Bukan Anggota"
             />
           </div>
@@ -330,7 +318,7 @@ const save = async () => {
             type="button"
             color="primary"
             variant="outline"
-            @click="form.priest = { label: '', value: 0 }; form.priest_name = ''; isPriestMember = false"
+            @click="form.priest = { label: '', value: 0 }; form.priest_name = marriage?.priest_name || ''; isPriestMember = false"
             label="Anggota"
           />
         </div>
@@ -346,7 +334,7 @@ const save = async () => {
             type="button"
             color="primary"
             variant="outline"
-            @click="form.priest = { label: '', value: 0 }; form.priest_name = ''; isPriestMember = true"
+            @click="form.priest = { label: marriage?.priest_member?.name || '', value: marriage?.priest || 0 }; form.priest_name = ''; isPriestMember = true"
             label="Bukan Anggota"
           />
         </div>

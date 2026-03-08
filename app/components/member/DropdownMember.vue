@@ -6,32 +6,43 @@ const props = withDefaults(defineProps<{
   multiple?: boolean
   placeholder?: string,
   loading?: boolean 
-  selected: number
+  selected?: number
   selectedLabel?: string
+  selectedMultiple?: {value: number, label: string}[]
   memberItems: {value: number, label: string}[]
 }>(), {
   required: false,
   multiple: false,
   placeholder: 'Cari dan pilih Anggota',
   loading: false,
+  selected: 0,
   selectedLabel: '',
+  selectedMultiple: () => []
 })
 
 const emit = defineEmits<{
   (e: 'update:selected', value: number): void
   (e: 'update:selected-object', value: { value: number, label: string }): void
+  (e: 'update:selected-multiple', value: { value: number; label: string }[]): void
   (e: 'search', value: string): void
 }>()
 
 const selectedMemberId = ref<number>(props.selected)
-const selectedMember = ref<{value: number, label: string}>({value: props.selected, label: props.selectedLabel})
+const selectedMember = ref<{value: number, label: string}>({ value: 0, label: '' })
+// const selectedMemberMultiply = computed({
+//   get() {
+//     return props.selectedMultiple ?? []
+//   },
+//   set(value) {
+//     emit('update:selected-multiple', value)
+//   }
+// })
 
 watch(
-  () => [props.selected, props.selectedLabel],
-  ([value, label]) => {
-    selectedMember.value = {
-      value: Number(value) ?? 0,
-      label: String(label) ?? ''
+  () => [props.selected, props.selectedLabel] as const,
+  ([newVal, newLabel]) => {
+    if (newVal !== selectedMember.value?.value) {
+      selectedMember.value = { value: newVal, label: newLabel }
     }
   },
   { immediate: true }
@@ -53,13 +64,42 @@ watch(selectedMember, () => {
   emit('update:selected', selectedMemberId.value) // return number
   emit('update:selected-object', selectedMember.value) //return object
 })
+
+const mergedItems = computed(() => {
+  const selected = props.multiple
+    ? props.selectedMultiple
+    : selectedMember.value
+      ? [selectedMember.value]
+      : []
+
+  const map = new Map<number, { value: number; label: string }>()
+
+  ;[...selected, ...props.memberItems].forEach((item: any) => {
+    map.set(item.value, item)
+  })
+
+  return Array.from(map.values())
+})
+
+const inputModel = computed({
+  get() {
+    return props.multiple ? props.selectedMultiple : selectedMember.value
+  },
+  set(value: any) {
+    if (props.multiple) {
+      emit('update:selected-multiple', value)
+    } else {
+      selectedMember.value = value
+    }
+  }
+})
 </script>
 
 <template>
   <UInputMenu
-    v-model="selectedMember"
+    v-model="inputModel"
     :multiple="multiple"
-    :items="memberItems"
+    :items="mergedItems"
     :loading="loading"
     @update:search-term="emitSearch($event)"
     :placeholder="placeholder"

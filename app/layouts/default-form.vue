@@ -37,7 +37,7 @@ const router = useRouter()
         <div>
           <p class="text-md font-semibold mb-1">Informasi:</p>
           <p class="text-sm">
-            Field dengan <span class="text-error">*</span> wajib diisi.
+            Field dengan <Mandatory/> wajib diisi.
             Pastikan semua data sudah benar sebelum menyimpan.
           </p>
         </div>

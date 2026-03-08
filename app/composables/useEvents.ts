@@ -2,16 +2,6 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
-// export interface Member {
-//   id: number
-//   name: string
-// }
-
-// export interface Organization {
-//   id: number
-//   name: string
-// }
-
 export interface Event {
   id: number
 
@@ -53,6 +43,13 @@ export const useEvent = () => {
 
   const events = ref<Event[]>([])
   const currentEvent = ref<Event | null>(null)
+  
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -76,14 +73,27 @@ export const useEvent = () => {
     return headers
   }
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
 
     try {
-      events.value = await $fetch<Event[]>(`${apiBase}/events`, {
+      const res: any = await $fetch<Event[]>(`${apiBase}/events`, {
         headers: getHeaders(false),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
+
+      events.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (e) {
       console.error('❌ fetchAll:', e)
       error.value = 'Gagal memuat agenda'
@@ -137,6 +147,7 @@ export const useEvent = () => {
   return {
     events,
     currentEvent,
+    meta,
     loading,
     error,
 
