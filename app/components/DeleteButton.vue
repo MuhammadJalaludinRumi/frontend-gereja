@@ -27,7 +27,7 @@ const handleClick = async () => {
 
     toast.add({
       title: 'Berhasil Menghapus',
-      description: `${props.type || 'Data'} #${props.row?.name || ''} berhasil dihapus.`,
+      description: `${props.type || 'Data'} #${props.row?.id || ''} berhasil dihapus.`,
       color: 'success'
     })
   } catch (err) {

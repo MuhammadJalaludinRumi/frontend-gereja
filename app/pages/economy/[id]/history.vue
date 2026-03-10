@@ -6,7 +6,7 @@ import { useEconomyHistory } from '~/composables/useEconomyHistory'
 const route = useRoute()
 const id = Number(route.params.id)
 
-const { history, fetchHistory } = useEconomyHistory()
+const { history, fetchHistory, error } = useEconomyHistory()
 const loading = ref(true)
 
 onMounted(async () => {
@@ -38,8 +38,10 @@ const columns = [
       :data="history"
       :columns="columns"
       :loading="loading"
+      :error="error"
       :show-actions="false"
       :show-input-search="false"
+      @retry="fetchHistory(id)"
     >
       <template #updated_at-cell="{ row }">
         {{ $formatDate(row.original.updated_at) }}

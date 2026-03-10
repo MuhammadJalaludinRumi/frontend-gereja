@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import DefaultList from '~/layouts/default-list.vue'
-
 definePageMeta({
   middleware: ['role'],
   roles: [4]
 })
 
-const { members, meta, fetchAll, remove } = useMembers()
-const loading = ref(true)
+const { members, meta, fetchAll, remove, loading, error } = useMembers()
 
 const showDetailModal = ref(false)
 const selectedRow = ref<any>(null)
@@ -22,30 +19,19 @@ const search = ref('')
 watch(
   (): [number, number, string] => [pagination.value.pageIndex, pagination.value.pageSize, search.value],
   async ([pageIndex, pageSize, searchValue]: [number, number, string]) => {
-    loading.value = true
-    try {
-      await fetchAll({
-        page: pageIndex + 1,
-        per_page: pageSize,
-        search: searchValue
-      })
-    } finally {
-      loading.value = false
-    }
+    await fetchAll({
+      page: pageIndex + 1,
+      per_page: pageSize,
+      search: searchValue
+    })
   }
 )
 
 onMounted(async () => {
-  try {
-    await fetchAll({
-      page: pagination.value.pageIndex + 1,
-      per_page: pagination.value.pageSize,
-    })
-  } catch (err) {
-    console.error("Error fetching members:", err)
-  } finally {
-    loading.value = false
-  }
+  await fetchAll({
+    page: pagination.value.pageIndex + 1,
+    per_page: pagination.value.pageSize,
+  })  
 })
 
 const columns = [
@@ -93,12 +79,14 @@ const onSearch = async (query: string) => {
       :data="membersData"
       :columns="columns" 
       :loading="loading" 
+      :error="error"
       :total="meta.total"
       :pagination="pagination"
       @update:pagination="pagination = $event"
       @detail="openDetail"
       @delete="handleDelete"
       @search="onSearch"
+      @retry="fetchAll"
     >
       <template #photo-cell="{row}">
         <UAvatar

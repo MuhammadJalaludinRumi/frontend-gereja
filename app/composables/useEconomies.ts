@@ -60,7 +60,7 @@ export const useEconomies = () => {
         last_page: res.last_page
       }
     } catch (err) {
-      error.value = 'Gagal memuat data Economy'
+      error.value = 'Gagal mengambil data ekonomi'
       console.error(err)
     } finally {
       loading.value = false
@@ -78,7 +78,7 @@ export const useEconomies = () => {
       })
       economy.value = res
     } catch (err) {
-      error.value = 'Gagal memuat data Economy'
+      error.value = 'Gagal mengambil data ekonomi'
       console.error(err)
     } finally {
       loading.value = false
@@ -97,7 +97,7 @@ export const useEconomies = () => {
       return res
     } catch (err) {
       console.error(err)
-      throw new Error('Gagal membuat Economy')
+      throw new Error('Gagal menambahkan ekonomi')
     }
   }
 
@@ -113,7 +113,7 @@ export const useEconomies = () => {
       return res
     } catch (err) {
       console.error(err)
-      throw new Error('Gagal memperbarui Economy')
+      throw new Error('Gagal memperbarui ekonomi')
     }
   }
 
@@ -127,7 +127,7 @@ export const useEconomies = () => {
       })
     } catch (err) {
       console.error(err)
-      throw new Error('Gagal menghapus Economy')
+      throw new Error('Gagal menghapus ekonomi')
     }
   }
 

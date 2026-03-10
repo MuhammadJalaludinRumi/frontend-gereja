@@ -13,7 +13,8 @@ const emit = defineEmits([
   'detail', 
   'delete', 
   'search',
-  'sort'
+  'sort',
+  'retry'
 ])
 
 const props = withDefaults(defineProps<{
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<{
   columns: Column[]
   showActions?: boolean
   loading: boolean
+  error?: string | null
   total?: number
   pagination?: {
     pageIndex: number
@@ -32,6 +34,7 @@ const props = withDefaults(defineProps<{
   showActions: true,
   showInputSearch: true,
   pagination: undefined,
+  error: null
 })
 
 const route = useRoute()
@@ -133,11 +136,26 @@ const getValue = (obj: any, path: string) => {
     }"
   >
     <template #empty>
-      <span class="text-muted">Tidak ada data</span>
+      <div v-if="error" class="flex flex-col items-center gap-4">
+        <span class="text-error text-sm">
+          {{ error }}
+        </span>
+        
+        <UButton
+          icon="i-heroicons-arrow-path"
+          size="sm"
+          color="neutral"
+          variant="ghost"
+          label="Coba Lagi"
+          @click="$emit('retry')"
+        />
+      </div>
+
+      <span v-else class="text-muted text-sm">Tidak ada data</span>
     </template>
     
     <template #loading>
-      <span class="text-muted">Memuat data...</span>
+      <span class="text-muted text-sm">Memuat data...</span>
     </template>
 
     <template
