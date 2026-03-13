@@ -4,39 +4,49 @@ definePageMeta({
   roles: [1],
 });
 
-import { onMounted } from "vue";
-import { useNews } from "~/composables/useNews";
+const { news, meta, fetchAll, update, remove, loading, saving, error } = useNews();
 
-const { news, fetchAll, update, remove, loading, error } = useNews();
+const search = shallowRef('')
 
-// Ambil data pas mount
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: 10,
+})
+
+watch(
+  (): [number, number, string] => [pagination.value.pageIndex, pagination.value.pageSize, search.value],
+  async ([pageIndex, pageSize, searchValue]: [number, number, string]) => {
+    await fetchAll({
+      page: pageIndex + 1,
+      per_page: pageSize,
+      search: searchValue
+    })
+  }
+)
+
 onMounted(fetchAll);
 
-// Fungsi hapus
-const handleDelete = async (id: number) => {
-  if (!confirm("Apakah kamu yakin ingin menghapus berita ini?")) return
-  try {
-    await remove(id);
-    await fetchAll();
-  } catch (err) {
-    console.error("❌ Gagal hapus berita:", err);
-    alert("Gagal menghapus berita");
-  }
-};
+const columns = [
+  { header: '#', accessorKey: 'id', id: 'id'},
+  { header: 'Tanggal', accessorKey: 'date_post', id: 'date_post' },
+  { header: 'Judul', accessorKey: 'title', id: 'title' },
+  { header: 'Status', accessorKey: 'status', id: 'status' },
+  { header: 'Tampil Di Login', accessorKey: 'show_on_login', id: 'show_on_login' },
+]
 
-// Format tanggal biar rapi
-const formatDate = (date: string) => {
-  if (!date) return "-";
-  try {
-    return new Date(date).toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return date.split("T")[0];
+const handleDelete = async (row: any ) => {
+  await remove(row.id)
+  await fetchAll()
+}
+
+const onSearch = async (query: string) => {
+  search.value = query
+
+  pagination.value = {
+    ...pagination.value,
+    pageIndex: 0
   }
-};
+}
 
 const toggleShowOnLogin = async (item: any) => {
   const newValue = item.show_on_login ? 0 : 1;
@@ -45,143 +55,46 @@ const toggleShowOnLogin = async (item: any) => {
     await update(item.id, { show_on_login: newValue });
     item.show_on_login = newValue;
   } catch (err) {
-    console.error("Gagal update show_on_login:", err);
-    alert("Gagal mengubah status show_on_login");
+    console.error("Gagal update:", err);
+    alert("Gagal mengubah status");
   }
 };
 </script>
 
 <template>
-  <div
-    class="p-6 w-full overflow-hidden"
-    style="color: var(--ui-text); background: var(--ui-bg)"
-  >
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted)">
-        Daftar Berita
-      </h1>
-      <UButton
-        to="/news/create"
-        icon="i-heroicons-plus-circle"
-        size="md"
-        color="primary"
-        label="Tambah Berita"
-      />
-    </div>
-
-    <!-- Loading & Error -->
-    <div v-if="loading" class="text-center py-6 text-gray-500">
-      Memuat data berita...
-    </div>
-    <div v-else-if="error" class="text-center py-6 text-red-500">
-      {{ error }}
-    </div>
-
-    <!-- Table -->
-    <UCard
-      v-else
-      class="relative z-0 overflow-hidden"
+    <DefaultList title="Berita">
+    <DataTable
+      type="Berita"
+      :data="news"
+      :columns="columns" 
+      :loading="loading || saving" 
+      :error="error"
+      :total="meta.total"
+      :pagination="pagination"
+      @update:pagination="pagination = $event"
+      @delete="handleDelete"
+      @search="onSearch"
+      @retry="fetchAll"
     >
-      <div class="overflow-x-auto w-full">
-        <table class="min-w-full table-auto border-collapse">
-          <thead>
-            <tr class="border-b border-gray-700/20">
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                ID
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Tanggal
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Judul
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Status
-              </th>
-              <th
-                class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Aksi
-              </th>
-              <th class="px-3 py-3 text-xs">Show Login</th>
-            </tr>
-          </thead>
+      <template #date_post-cell="{row}">
+        {{ $formatDate(row.original.date_post) }}
+      </template>
 
-          <tbody>
-            <tr
-              v-for="item in news"
-              :key="item.id"
-              class="transition-colors hover:bg-gray-50/5 border-b border-gray-700/10"
-            >
-              <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">
-                {{ item.id }}
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                {{ formatDate(item.date_post) }}
-              </td>
-              <td class="px-3 py-3 text-sm">
-                {{ item.title }}
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <span :class="item.status ? 'text-green-600' : 'text-red-600'">
-                  {{ item.status ? "Aktif" : "Nonaktif" }}
-                </span>
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap text-center">
-                <div class="flex justify-center gap-2">
-                  <UButton
-                    :to="`/news/${item.id}`"
-                    icon="i-heroicons-pencil-square"
-                    size="xs"
-                    color="info"
-                    variant="soft"
-                    label="Edit"
-                  />
-                  <UButton
-                    @click.stop="handleDelete(item.id!)"
-                    icon="i-heroicons-trash"
-                    size="xs"
-                    color="error"
-                    variant="soft"
-                    label="Hapus"
-                  />
-                </div>
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <button
-                  @click="toggleShowOnLogin(item)"
-                  class="px-3 py-1 rounded text-white text-xs font-semibold"
-                  :class="
-                    item.show_on_login
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gray-500 hover:bg-gray-600'
-                  "
-                >
-                  {{ item.show_on_login ? "Ya" : "Tidak" }}
-                </button>
-              </td>
-            </tr>
+      <template #status-cell="{row}">
+        <span :class="row.original.status ? 'text-primary' : 'text-error'">
+          {{ row.original.status ? 'Aktif' : 'Nonaktif' }}
+        </span>
+      </template>
 
-            <tr v-if="!news.length">
-              <td
-                colspan="5"
-                class="px-3 py-4 text-center text-gray-500 text-sm italic"
-              >
-                Tidak ada berita ditemukan.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </UCard>
-  </div>
+      <template #show_on_login-cell="{row}">
+        <UButton
+          :color="row.original.show_on_login ? 'primary' : 'neutral'"
+          variant="soft"
+          size="xs"
+          :label="row.original.show_on_login ? 'Ya' : 'Tidak' "
+          @click="toggleShowOnLogin(row.original)"
+        />
+      </template>
+    </DataTable>
+  </DefaultList>
 </template>

@@ -4,15 +4,11 @@ definePageMeta({
   roles: [1]
 })
 
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useNews } from '~/composables/useNews'
-
 const router = useRouter()
-const { create, loading } = useNews()
+const { create, saving } = useNews()
 
-const form = ref({
-  date_post: new Date().toISOString().split('T')[0], // default hari ini
+const form = ref<NewsForm>({
+  date_post: new Date().toISOString().split('T')[0] ?? '',
   title: '',
   content: '',
   thumbnail: '',
@@ -20,107 +16,28 @@ const form = ref({
   status: 1
 })
 
-const saving = ref(false)
-const formError = ref<string | null>(null)
-
 const submit = async () => {
-  // validasi basic
-  if (!form.value.title.trim() || !form.value.content.trim()) {
-    formError.value = 'Judul dan konten wajib diisi.'
-    return
-  }
-
-  saving.value = true
-  formError.value = null
-
   try {
-    await create(form.value as any)
-    router.push('/news')
+    await create(form.value as Reflection)
+    router.push("/reflection")
   } catch (err) {
-    console.error('❌ Gagal membuat berita:', err)
-    formError.value = 'Gagal menyimpan berita. Coba lagi nanti.'
-  } finally {
-    saving.value = false
-  }
+    console.error("❌ gagal create reflection", err)
+  } 
 }
+
+const cancel = () => {
+  router.push("/reflection")
+}
+
 </script>
 
 <template>
-  <div class="p-6 w-full" style="color: var(--ui-text); background: var(--ui-bg)">
-    <h1 class="text-2xl font-bold mb-6" style="color: var(--ui-text-highlighted)">
-      Tambah Berita Baru
-    </h1>
-
-    <UCard>
-      <form @submit.prevent="submit" class="space-y-5">
-        <!-- tanggal -->
-        <div>
-          <label class="block mb-1 font-medium">Tanggal Publikasi</label>
-          <UInput v-model="form.date_post" type="date" class="w-full"/>
-        </div>
-
-        <!-- judul -->
-        <div>
-          <label class="block mb-1 font-medium">Judul Berita</label>
-          <UInput v-model="form.title" placeholder="Masukkan judul berita" class="w-full"/>
-        </div>
-
-        <!-- konten -->
-        <div>
-          <label class="block mb-1 font-medium">Konten</label>
-          <UTextarea
-            v-model="form.content"
-            placeholder="Masukkan isi berita"
-            :rows="6"
-            class="w-full"
-          />
-        </div>
-
-        <!-- thumbnail -->
-        <div>
-          <label class="block mb-1 font-medium">Thumbnail URL</label>
-          <UInput v-model="form.thumbnail" placeholder="Opsional" class="w-full" />
-        </div>
-
-        <!-- image -->
-        <div>
-          <label class="block mb-1 font-medium">Image URL</label>
-          <UInput v-model="form.image" placeholder="Opsional" class="w-full" />
-        </div>
-
-        <!-- status -->
-        <div>
-          <label class="block mb-1 font-medium">Status</label>
-          <USelect
-            v-model="form.status"
-            :items="[
-              { label: 'Aktif', value: 1 },
-              { label: 'Nonaktif', value: 0 }
-            ]"
-          />
-        </div>
-
-        <!-- actions -->
-        <div class="flex justify-end gap-3 pt-4">
-          <UButton
-            color="neutral"
-            variant="soft"
-            label="Batal"
-            @click="router.push('/news')"
-          />
-          <UButton
-            type="submit"
-            :loading="saving || loading"
-            color="primary"
-            label="Simpan"
-          />
-        </div>
-
-        <!-- error -->
-        <p v-if="formError" class="text-red-500 text-sm mt-2">
-          {{ formError }}
-        </p>
-      </form>
-    </UCard>
-  </div>
+  <DefaultForm title="Tambah Berita">
+    <FormNews
+      v-model="form"
+      :saving="saving"
+      @submit="submit"
+      @cancel="cancel"
+    />
+  </DefaultForm>
 </template>
