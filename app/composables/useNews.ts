@@ -1,7 +1,3 @@
-import { ref } from 'vue'
-import { useApiUrl } from './useApiUrl'
-import { useCookie, useRuntimeConfig } from '#app'
-
 export interface News {
   id?: number
   date_post: string
@@ -20,9 +16,16 @@ export const useNews = () => {
   const news = ref<News[]>([])
   const currentNews = ref<News | null>(null)
   const loginNews = ref<News | null>(null)
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
 
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+  const loading = shallowRef(false)
+  const saving = shallowRef(false)
+  const error = shallowRef<string | null>(null)
 
   const isProd = config.public.sessionSecureCookie === 'true'
   const xsrfToken = useCookie('XSRF-TOKEN').value
@@ -45,7 +48,7 @@ export const useNews = () => {
 
   async function fetchLoginNews() {
     try {
-      const { data } = await useFetch('/api/news/login')
+      const { data }: any = await useFetch('/api/news/login')
       console.log('LOGIN NEWS:', data.value)
       loginNews.value = data.value
     } catch (err) {
@@ -72,13 +75,26 @@ export const useNews = () => {
   // 🔵 3. PROTECTED NEWS (ADMIN)
   // ============================
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
     try {
-      news.value = await $fetch<News[]>(`${apiBase}/news`, {
+      const res: any = await $fetch<News[]>(`${apiBase}/news`, {
         headers: getHeaders(false),
-        credentials: 'include'
+        credentials: 'include',
+        params,
       })
+
+      news.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (e) {
       console.error('❌ fetchAll:', e)
       error.value = 'Gagal memuat berita'
@@ -103,21 +119,37 @@ export const useNews = () => {
   }
 
   const create = async (payload: News) => {
-    return await $fetch(`${apiBase}/news`, {
-      method: 'POST',
-      headers: getHeaders(),
-      credentials: 'include',
-      body: payload
-    })
+    saving.value = true
+    try {
+      await $fetch(`${apiBase}/news`, {
+        method: 'POST',
+        headers: getHeaders(),
+        credentials: 'include',
+        body: payload
+      })
+    } catch (e) {
+      console.error('Gagal menyimpan berita', e)
+      error.value = 'Gagal menyimpan berita'
+    } finally {
+      saving.value = false
+    }
   }
 
   const update = async (id: number, payload: Partial<News>) => {
-    return await $fetch(`${apiBase}/news/${id}`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      credentials: 'include',
-      body: payload
-    })
+    saving.value = true
+    try {
+      await $fetch(`${apiBase}/news/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        credentials: 'include',
+        body: payload
+      })
+    } catch (e) {
+      console.error('Gagal memperbarui berita', e)
+      error.value = 'Gagal memperbarui berita'
+    } finally {
+      saving.value = false
+    }
   }
 
   const remove = async (id: number) => {
@@ -133,7 +165,10 @@ export const useNews = () => {
     news,
     currentNews,
     loginNews,
+    meta,
+
     loading,
+    saving,
     error,
 
     // public

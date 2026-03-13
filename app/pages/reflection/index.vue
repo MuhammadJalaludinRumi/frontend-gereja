@@ -4,152 +4,74 @@ definePageMeta({
   roles: [1, 4],
 })
 
-import { onMounted } from "vue";
-import { useReflections  } from "~/composables/useReflections";
+const { reflections, meta, fetchAll, remove, loading, error } = useReflections()
 
-const { reflections, fetchAll, remove, loading, error } = useReflections()
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: 10,
+})
+
+const search = shallowRef('')
+
+watch(
+  (): [number, number, string] => [pagination.value.pageIndex, pagination.value.pageSize, search.value],
+  async ([pageIndex, pageSize, searchValue]: [number, number, string]) => {
+    await fetchAll({
+      page: pageIndex + 1,
+      per_page: pageSize,
+      search: searchValue
+    })
+  }
+)
 
 onMounted(fetchAll)
 
-const handleDelete = async (id: number) => {
-  if (!confirm("Apakah kamu yakin ingin menghapus renungan ini?")) return;
-  try {
-    await remove(id);
-    await fetchAll();
-  } catch (err) {
-    console.error("❌ Gagal hapus renungan:", err);
-    alert("Gagal menghapus renungan");
-  }
-};
+const columns = [
+  { header: '#', accessorKey: 'id', id: 'id'},
+  { header: 'Tanggal', accessorKey: 'date_post', id: 'date_post' },
+  { header: 'Judul', accessorKey: 'title', id: 'title' },
+  { header: 'Status', accessorKey: 'status', id: 'status' },
+]
 
-const formatDate = (date: string) => {
-  if (!date) return "-";
-  try {
-    return new Date(date).toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return date.split("T")[0];
-  }
-};
+const handleDelete = async (row: any ) => {
+  await remove(row.id)
+  await fetchAll()
+}
 
+const onSearch = async (query: string) => {
+  search.value = query
+
+  pagination.value = {
+    ...pagination.value,
+    pageIndex: 0
+  }
+}
 </script>
 
 <template>
-  <div
-    class="p-6 w-full overflow-hidden"
-    style="color: var(--ui-text); background: var(--ui-bg)"
-  >
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted)">
-        Daftar Renungan
-      </h1>
-      <UButton
-        to="/reflection/create"
-        icon="i-heroicons-plus-circle"
-        size="md"
-        color="primary"
-        label="Tambah Renungan"
-      />
-    </div>
+  <DefaultList title="Renungan">
+    <DataTable
+      type="Renungan"
+      :data="reflections"
+      :columns="columns" 
+      :loading="loading" 
+      :error="error"
+      :total="meta.total"
+      :pagination="pagination"
+      @update:pagination="pagination = $event"
+      @delete="handleDelete"
+      @search="onSearch"
+      @retry="fetchAll"
+    >
+      <template #date_post-cell="{row}">
+        {{ $formatDate(row.original.date_post) }}
+      </template>
 
-    <!-- Loading & Error -->
-    <div v-if="loading" class="text-center py-6 text-gray-500">
-      Memuat data renungan...
-    </div>
-    <div v-else-if="error" class="text-center py-6 text-red-500">
-      {{ error }}
-    </div>
-
-    <!-- Table -->
-    <UCard v-else class="relative z-0 overflow-hidden">
-      <div class="overflow-x-auto w-full">
-        <table class="min-w-full table-auto border-collapse">
-          <thead>
-            <tr class="border-b border-gray-700/20">
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                ID
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Tanggal
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Judul
-              </th>
-              <th
-                class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Status
-              </th>
-              <th
-                class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap"
-              >
-                Aksi
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr
-              v-for="item in reflections"
-              class="transition-colors hover:bg-gray-50/5 border-b border-gray-700/10"
-            >
-              <td class="px-3 py-3 text-sm font-medium whitespace-nowrap">
-                {{ item.id }}
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                {{ formatDate(item.date_post) }}
-              </td>
-              <td class="px-3 py-3 text-sm">
-                {{ item.title }}
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <span :class="item.status ? 'text-green-600' : 'text-red-600'">
-                  {{ item.status ? "Aktif" : "Nonaktif" }}
-                </span>
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap text-center">
-                <div class="flex justify-center gap-2">
-                  <UButton
-                    :to="`/reflection/${item.id}`"
-                    icon="i-heroicons-pencil-square"
-                    size="xs"
-                    color="info"
-                    variant="soft"
-                    label="Edit"
-                  />
-                  <UButton
-                    @click.stop="handleDelete(item.id!)"
-                    icon="i-heroicons-trash"
-                    size="xs"
-                    color="error"
-                    variant="soft"
-                    label="Hapus"
-                  />
-                </div>
-              </td>
-            </tr>
-
-            <tr v-if="!reflections.length">
-              <td
-                colspan="5"
-                class="px-3 py-4 text-center text-gray-500 text-sm italic"
-              >
-                Tidak ada renungan ditemukan.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </UCard>
-  </div>
+      <template #status-cell="{row}">
+        <span :class="row.original.status ? 'text-primary' : 'text-error'">
+          {{ row.original.status ? 'Aktif' : 'Nonaktif' }}
+        </span>
+      </template>
+    </DataTable>
+  </DefaultList>
 </template>

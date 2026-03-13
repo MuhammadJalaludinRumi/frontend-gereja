@@ -65,10 +65,12 @@ const allLinks: NavigationMenuItem[] = [
   },
 
   { 
-    label: 'Pengumuman', 
-    icon: 'i-lucide-megaphone', 
-    to: '/announcement', 
-    roles: [1, 4] 
+    label: 'Pengguna',
+    icon: 'i-lucide-user',
+    children: [
+      { label: 'Manajemen Pengguna', to: '/users', roles: [1] },
+      { label: 'Otoritas Pengguna', to: '/user-authorities', roles: [1] },
+    ]
   },
 
   // =======================
@@ -97,9 +99,6 @@ const allLinks: NavigationMenuItem[] = [
     roles: [4]
   },
 
-  // =======================
-  // ADMIN LIST (NO DROPDOWN)
-  // =======================
   { label: 'Kota', icon: 'i-lucide-map-pin', to: '/city', roles: [1] },
   { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
   { label: 'Lisensi', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
@@ -107,9 +106,8 @@ const allLinks: NavigationMenuItem[] = [
   { label: 'Lisensi Organisasi', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
   { label: 'Organisasi', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
   { label: 'Provinsi', icon: 'i-lucide-map', to: '/province', roles: [1] },
+  { label: 'Pengumuman', icon: 'i-lucide-megaphone', to: '/announcement', roles: [1, 4] },
   { label: 'Renungan', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1, 4] },
-  { label: 'Otoritas User', icon: 'i-lucide-shield', to: '/user-authorities', roles: [1] },
-  { label: 'Manajemen User', icon: 'i-lucide-user-cog', to: '/users', roles: [1] },
   { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] }
 ]
 

@@ -4,9 +4,6 @@ definePageMeta({
   roles: [1, 4],
 })
 
-import { ref } from "vue";
-import { useRouter } from 'vue-router'
-
 const router = useRouter()
 const { create, loading } = useAnnouncements()
 
@@ -44,69 +41,66 @@ const submit = async () => {
 </script>
 
 <template>
-  <div class="p-6 w-full" style="color: var(--ui-text); background: var(--ui-bg)">
-    <h1 class="text-2xl font-bold mb-6" style="color: var(--ui-text-highlighted)">
-      Tambah Pengumuman Baru
-    </h1>
+  <DefaultForm title="Tambah Pengumuman">
+    <form @submit.prevent="submit" class="space-y-5">
+      <!-- tanggal -->
+      <div>
+        <label class="block mb-1 font-medium text-sm">Tanggal Publikasi <Mandatory/></label>
+        <UInput v-model="form.date_post" type="date"  class="w-full" required/>
+      </div>
 
-    <UCard>
-      <form @submit.prevent="submit" class="space-y-5">
-        <!-- tanggal -->
-        <div>
-          <label class="block mb-1 font-medium">Tanggal Publikasi</label>
-          <UInput v-model="form.date_post" type="date"  class="w-full"/>
-        </div>
+      <!-- judul -->
+      <div>
+        <label class="block mb-1 font-medium text-sm">Judul Pengumuman <Mandatory/></label>
+        <UInput v-model="form.title" placeholder="Masukkan judul pengumuman" class="w-full" required/>
+      </div>
 
-        <!-- judul -->
-        <div>
-          <label class="block mb-1 font-medium">Judul Pengumuman</label>
-          <UInput v-model="form.title" placeholder="Masukkan judul pengumuman" class="w-full"/>
-        </div>
+      <!-- konten -->
+      <div>
+        <label class="block mb-1 font-medium text-sm">Konten <Mandatory/></label>
+        <UTextarea
+          v-model="form.content"
+          placeholder="Masukkan isi pengumuman"
+          :rows="6"
+          class="w-full"
+          required
+        />
+      </div>
 
-        <!-- konten -->
-        <div>
-          <label class="block mb-1 font-medium">Konten</label>
-          <UTextarea
-            v-model="form.content"
-            placeholder="Masukkan isi pengumuman"
-            :rows="6"
-            class="w-full"
-          />
-        </div>
+      <!-- status -->
+      <div>
+        <label class="block mb-1 font-medium text-sm">Status <Mandatory/></label>
+        <USelect
+          v-model="form.status"
+          :items="[
+            { label: 'Aktif', value: 1 },
+            { label: 'Nonaktif', value: 0 }
+          ]"
+        />
+      </div>
+      
+      <!-- actions -->
+      <div class="flex justify-end gap-3 pt-4">
+        <UButton
+          color="neutral"
+          icon="i-heroicons-x-mark"
+          variant="ghost"
+          label="Batal"
+          @click="router.push('/announcement')"
+        />
+        <UButton
+          type="submit"
+          icon="i-heroicons-check-circle"
+          :loading="saving || loading"
+          color="primary"
+          label="Simpan Pengumuman"
+        />
+      </div>
 
-        <!-- status -->
-        <div>
-          <label class="block mb-1 font-medium">Status</label>
-          <USelect
-            v-model="form.status"
-            :items="[
-              { label: 'Aktif', value: 1 },
-              { label: 'Nonaktif', value: 0 }
-            ]"
-          />
-        </div>
-        
-        <!-- actions -->
-        <div class="flex justify-end gap-3 pt-4">
-          <UButton
-            color="neutral"
-            variant="soft"
-            label="Batal"
-            @click="router.push('/announcement')"
-          />
-          <UButton
-            type="submit"
-            :loading="saving || loading"
-            color="primary"
-            label="Simpan"
-          />
-        </div>
-
-        <!-- error -->
-        <p v-if="formError" class="text-red-500 text-sm mt-2">
-          {{ formError }}
-        </p>
-      </form>
-    </UCard>
-  </div>
+      <!-- error -->
+      <p v-if="formError" class="text-red-500 text-sm mt-2">
+        {{ formError }}
+      </p>
+    </form>
+  </DefaultForm>
 </template>

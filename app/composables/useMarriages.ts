@@ -75,7 +75,7 @@ export const useMarriages = () => {
       }
     } catch (err) {
       console.error(err)
-      error.value = 'Gagal ngambil data pernikahan'
+      error.value = 'Gagal mengambil data pernikahan'
     } finally {
       loading.value = false
     }

@@ -121,7 +121,7 @@ export const useMembers = () => {
         last_page: res.last_page
       }
     } catch (err) {
-      error.value = 'Gagal memuat data member'
+      error.value = 'Gagal memuat data anggota'
       console.error(err)
     } finally {
       loading.value = false
@@ -144,7 +144,7 @@ export const useMembers = () => {
 
       member.value = res
     } catch (err) {
-      error.value = 'Gagal memuat detail member'
+      error.value = 'Gagal memuat detail anggota'
       member.value = null
       console.error(err)
     } finally {
@@ -256,7 +256,7 @@ export const useMembers = () => {
       return updated
     } catch (err) {
       console.error('UPDATE ERROR:', err)
-      throw new Error('Gagal update member')
+      throw new Error('Gagal update anggota')
     }
   }
 
@@ -276,7 +276,7 @@ export const useMembers = () => {
       return true
     } catch (err) {
       console.error(err)
-      throw new Error('Gagal menghapus member')
+      throw new Error('Gagal menghapus anggota')
     }
   }
 
@@ -295,7 +295,7 @@ export const useMembers = () => {
       memberSelect.value = res
 
     } catch (err) {
-      error.value = 'Gagal memuat data member'
+      error.value = 'Gagal memuat data anggota'
       console.error(err)
     } finally {
       loading.value = false

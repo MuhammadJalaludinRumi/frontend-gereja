@@ -6,8 +6,7 @@ definePageMeta({
   roles: [4]
 })
 
-const { economies, meta, fetchAll, remove } = useEconomies()
-const loading = ref(true)
+const { economies, meta, fetchAll, remove, loading, error } = useEconomies()
 
 const pagination = ref({
   pageIndex: 0,
@@ -75,11 +74,13 @@ const onSearch = async (query: string) => {
       :data="economies"
       :columns="columns"
       :loading="loading"
+      :error="error"
       :total="meta.total"
       :pagination="pagination"
       @update:pagination="pagination = $event"
       @delete="handleDelete"
       @search="onSearch"
+      @retry="fetchAll"
     >
       <template #class-cell="{ row }">
         <span class="capitalize">

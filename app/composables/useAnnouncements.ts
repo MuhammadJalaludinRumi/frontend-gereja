@@ -2,8 +2,8 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
-export interface Announcements {
-  id?: number
+export interface Announcement {
+  id: number
   date_post: string
   title: string
   content: string
@@ -14,8 +14,15 @@ export const useAnnouncements = () => {
   const apiBase = useApiUrl()
   const config = useRuntimeConfig()
 
-  const announcements = ref<Announcements[]>([])
-  const currentAnnouncement = ref<Announcements | null>(null)
+  const announcements = ref<Announcement[]>([])
+  const currentAnnouncement = ref<Announcement | null>(null)
+
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -39,14 +46,27 @@ export const useAnnouncements = () => {
     return headers
   }
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
 
     try {
-      announcements.value = await $fetch<Announcements[]>(`${apiBase}/announcements`, {
+      const res: any = await $fetch<Announcement[]>(`${apiBase}/announcements`, {
         headers: getHeaders(false),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
+
+      announcements.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (e) {
       console.error('❌ fetchAll:', e)
       error.value = 'Gagal memuat pengumuman'
@@ -59,7 +79,7 @@ export const useAnnouncements = () => {
     loading.value = true
 
     try {
-      currentAnnouncement.value = await $fetch<Announcements>(`${apiBase}/announcements/${id}`, {
+      currentAnnouncement.value = await $fetch<Announcement>(`${apiBase}/announcements/${id}`, {
         headers: getHeaders(),
         credentials: 'include'
       })
@@ -71,7 +91,7 @@ export const useAnnouncements = () => {
     }
   }
 
-  const create = async (payload: Announcements) => {
+  const create = async (payload: Announcement) => {
     return await $fetch(`${apiBase}/announcements`, {
       method: 'POST',
       headers: getHeaders(),
@@ -80,7 +100,7 @@ export const useAnnouncements = () => {
     });
   }
 
-  const update = async (id: number, payload: Partial<Announcements>) => {
+  const update = async (id: number, payload: Partial<Announcement>) => {
     return await $fetch(`${apiBase}/announcements/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
@@ -101,6 +121,7 @@ export const useAnnouncements = () => {
     // state
     announcements,
     currentAnnouncement,
+    meta,
     loading,
     error,
 

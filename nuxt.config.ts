@@ -14,6 +14,17 @@ export default defineNuxtConfig({
     '@vueuse/nuxt'
   ],
 
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false
+    },
+    {
+      path: '~/layouts',
+      pathPrefix: false
+    }
+  ],
+
   devtools: {
     enabled: true
   },

@@ -3,10 +3,20 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
+export interface Education {
+  id: number
+  member: number
+  level: string
+  institution: string
+  major: string
+  year_graduate: number
+  member_data: Member
+}
+
 export const useEducations = () => {
   const apiBase = useApiUrl()
-  const educations = ref<any[]>([])
-  const education = ref<any>(null)
+  const educations = ref<Education[]>([])
+  const education = ref<Education | null >(null)
   const meta = ref({
     total: 0,
     per_page: 10,
@@ -54,7 +64,7 @@ export const useEducations = () => {
         last_page: res.last_page
       }
     } catch (err) {
-      error.value = 'Gagal memuat data Education'
+      error.value = 'Gagal mengambil data pendidikan'
     } finally {
       loading.value = false
     }
@@ -64,14 +74,14 @@ export const useEducations = () => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch(`/educations/${id}`, {
+      const res: any = await $fetch(`/educations/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
       })
       education.value = res
     } catch (err) {
-      error.value = 'Gagal memuat detail Education'
+      error.value = 'Gagal mengambil detail pendidikan'
     } finally {
       loading.value = false
     }

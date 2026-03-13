@@ -64,7 +64,7 @@ export const useOccupations = () => {
       }
     } catch (err) {
       console.error(err)
-      error.value = 'Gagal memuat data Occupations'
+      error.value = 'Gagal mengambil data  pekerjaan'
     } finally {
       loading.value = false
     }
@@ -82,7 +82,7 @@ export const useOccupations = () => {
       occupation.value = res
     } catch (err) {
       console.error(err)
-      error.value = 'Gagal memuat data Occupation'
+      error.value = 'Gagal mengambil data pekerjaan'
     } finally {
       loading.value = false
     }

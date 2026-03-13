@@ -96,7 +96,7 @@ export const useEvent = () => {
       }
     } catch (e) {
       console.error('❌ fetchAll:', e)
-      error.value = 'Gagal memuat agenda'
+      error.value = 'Gagal mengambil data agenda'
     } finally {
       loading.value = false
     }
@@ -112,7 +112,7 @@ export const useEvent = () => {
       })
     } catch (e) {
       console.error('❌ fetchById:', e)
-      error.value = 'Gagal memuat agenda'
+      error.value = 'Gagal mengambil data agenda'
     } finally {
       loading.value = false
     }

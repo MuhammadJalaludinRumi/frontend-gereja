@@ -5,12 +5,13 @@ import { useCookie } from '#app'
 export function useEconomyHistory() {
   const apiUrl = useApiUrl()
   const token = useCookie('token')
-
+  const error = ref<string | null>(null)
   const history = ref([])
 
   const fetchHistory = async (id: number) => {
+    error.value = null
     try {
-      const res = await $fetch(`${apiUrl}/economy/${id}/history`, {
+      const res: any = await $fetch(`${apiUrl}/economy/${id}/history`, {
         headers: {
           Authorization: `Bearer ${token.value}`
         }
@@ -18,6 +19,7 @@ export function useEconomyHistory() {
       history.value = res.data || []
     } catch (err) {
       console.error('Gagal mengambil history:', err)
+      error.value = 'Gagal mengambil riwayat ekonomi'
     }
   }
 
@@ -38,6 +40,7 @@ export function useEconomyHistory() {
   return {
     history,
     fetchHistory,
-    addHistory
+    addHistory,
+    error,
   }
 }

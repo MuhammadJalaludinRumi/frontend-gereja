@@ -6,8 +6,7 @@ definePageMeta({
   roles: [4]
 })
 
-const { educations, meta, fetchAll, remove } = useEducations()
-const loading = ref(true)
+const { educations, meta, fetchAll, remove, loading, error } = useEducations()
 
 const pagination = ref({
   pageIndex: 0,
@@ -19,30 +18,19 @@ const search = ref('')
 watch(
   (): [number, number, string] => [pagination.value.pageIndex, pagination.value.pageSize, search.value],
   async ([pageIndex, pageSize, searchValue]: [number, number, string]) => {
-    loading.value = true
-    try {
-      await fetchAll({
-        page: pageIndex + 1,
-        per_page: pageSize,
-        search: searchValue
-      })
-    } finally {
-      loading.value = false
-    }
+    await fetchAll({
+      page: pageIndex + 1,
+      per_page: pageSize,
+      search: searchValue
+    })
   }
 )
 
 onMounted(async () => {
-  try {
-    await fetchAll({
-      page: pagination.value.pageIndex + 1,
-      per_page: pagination.value.pageSize,
-    })
-  } catch (err) {
-    console.error("Error fetching marriages:", err)
-  } finally {
-    loading.value = false
-  }
+  await fetchAll({
+    page: pagination.value.pageIndex + 1,
+    per_page: pagination.value.pageSize,
+  })
 })
 
 const columns = [
@@ -77,11 +65,13 @@ const onSearch = async (query: string) => {
       :data="educations"
       :columns="columns"
       :loading="loading"
+      :error="error"
       :total="meta.total"
       :pagination="pagination"
       @update:pagination="pagination = $event"
       @delete="handleDelete"
       @search="onSearch"
+      @retry="fetchAll"
     />
   </DefaultList>
 </template>
