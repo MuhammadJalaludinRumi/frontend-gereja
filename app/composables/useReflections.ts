@@ -3,11 +3,11 @@ import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
 export interface Reflection {
-  id?: number
+  id: number
   date_post: string
   title: string
   content: string
-  image: string
+  image?: string
   status: number
 }
 
@@ -17,8 +17,15 @@ export const useReflections = () => {
 
   const reflections = ref<Reflection[]>([])
   const currentReflection = ref<Reflection | null>(null)
+  const meta = ref({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
 
   const loading = ref(false)
+  const saving = shallowRef(false)
   const error = ref<string | null>(null)
 
   const isProd = config.public.sessionSecureCookie === 'true'
@@ -40,14 +47,27 @@ export const useReflections = () => {
     return headers
   }
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
 
     try {
-      reflections.value = await $fetch<Reflection[]>(`${apiBase}/reflections`, {
+      const res: any = await $fetch<Reflection[]>(`${apiBase}/reflections`, {
         headers: getHeaders(false),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
+
+      reflections.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (e) {
       console.error('❌ fetchAll:', e)
       error.value = 'Gagal memuat renungan'
@@ -73,21 +93,37 @@ export const useReflections = () => {
   }
 
   const create = async ( payload: Reflection ) => {
-    return await $fetch(`${apiBase}/reflections`, {
-      method: 'POST',
-      headers: getHeaders(),
-      credentials: 'include',
-      body: payload
-    });
+    saving.value = true
+    try {
+      await $fetch(`${apiBase}/reflections`, {
+        method: 'POST',
+        headers: getHeaders(),
+        credentials: 'include',
+        body: payload
+      });
+    } catch (e) {
+      console.error('Gagal menyimpan renungan', e)
+      error.value = 'Gagal menyimpan renungan'
+    } finally {
+      saving.value = false
+    }
   }
 
   const update = async (id: number, payload: Partial<Reflection>) => {
-    return await $fetch(`${apiBase}/reflections/${id}`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      credentials: 'include',
-      body: payload
-    })
+    saving.value = true
+    try {
+      await $fetch(`${apiBase}/reflections/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        credentials: 'include',
+        body: payload
+      })
+    } catch (e) {
+      console.error('Gagal memperbarui renungan', e)
+      error.value = 'Gagal memperbarui renungan'
+    } finally {
+      saving.value = false
+    }
   }
 
   const remove = async (id: number) => {
@@ -99,13 +135,14 @@ export const useReflections = () => {
   }
 
   return {
-    // state
     reflections,
     currentReflection,
+    meta,
+
     loading,
     error,
+    saving,
     
-    // protected
     fetchAll,
     fetchById,
     create,
