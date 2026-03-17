@@ -112,9 +112,10 @@ const submit = () => {
       <UButton
         type="submit"
         icon="i-heroicons-check-circle"
-        :loading="saving"
         color="primary"
-        label="Simpan Renungan"
+        :loading="saving"
+        :disabled="saving"
+        :label="saving ? 'Menyimpan...' : 'Simpan Renungan'"
       />
     </div>
 

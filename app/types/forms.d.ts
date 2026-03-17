@@ -16,3 +16,12 @@ interface NewsForm {
   image?: string,
   status: number,
 }
+
+interface UserForm {
+  id?: number
+  username: string
+  password?: string
+  name: string
+  is_active: boolean
+  role_id: number
+}
