@@ -3,10 +3,16 @@ import { ref } from 'vue'
 import { useApiUrl } from './useApiUrl'
 import { useCookie, useRuntimeConfig } from '#app'
 
+export interface Role {
+  id: number
+  organization_id: number
+  name: string
+}
+
 export const useRoles = () => {
   const apiBase = useApiUrl()
-  const roles = ref<any[]>([])
-  const role = ref<any>(null)
+  const roles = ref<Role[]>([])
+  const role = ref<Role | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -30,7 +36,7 @@ export const useRoles = () => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch('/roles', {
+      const res: any = await $fetch('/roles', {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'

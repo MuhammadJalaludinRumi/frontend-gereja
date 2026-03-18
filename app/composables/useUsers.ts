@@ -1,8 +1,4 @@
-import { ref } from 'vue'
-import { useApiUrl } from './useApiUrl'
-import { useCookie, useRuntimeConfig } from '#app'
-
-interface User {
+export interface User {
   id?: number
   username: string
   password?: string
@@ -14,8 +10,17 @@ interface User {
 export const useUsers = () => {
   const apiBase = useApiUrl()
   const users = ref<User[]>([])
+  const currentUser = ref<User | null>(null)
+  const meta = ref<PaginationMeta>({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
+  
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const saving = shallowRef(false)
 
   const config = useRuntimeConfig()
   const isProd = config.public.sessionSecureCookie === 'true'
@@ -37,16 +42,28 @@ export const useUsers = () => {
   }
 
   // GET semua user
-  const fetchUsers = async () => {
+  const fetchAll = async (params?: {
+    page?: number
+    per_page?: number
+    search?: string
+  }) => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch<User[]>('/users', {
+      const res = await $fetch<PaginatedResponse<User>>('/users', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
-      users.value = Array.isArray(res) ? res : []
+      
+      users.value = res.data
+      meta.value = {
+        total: res.total,
+        per_page: res.per_page,
+        current_page: res.current_page,
+        last_page: res.last_page
+      }
     } catch (err) {
       console.error('Gagal fetch users:', err)
       error.value = 'Gagal memuat data users'
@@ -55,8 +72,24 @@ export const useUsers = () => {
     }
   }
 
-  // POST create user baru
-  const createUser = async (payload: User) => {
+  const fetchById = async (id: number) => {
+    loading.value = true
+
+    try {
+      currentUser.value = await $fetch(`/users/${id}`, {
+        baseURL: apiBase,
+        headers: getHeaders(),
+        credentials: 'include',
+      })
+    } catch (e) {
+      console.error('Gagal fetch users:', e)
+      error.value = 'Gagal memuat data users'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const create = async (payload: User) => {
     try {
       await $fetch('/users', {
         baseURL: apiBase,
@@ -65,7 +98,6 @@ export const useUsers = () => {
         credentials: 'include',
         body: payload
       })
-      await fetchUsers()
     } catch (err) {
       console.error('Gagal create user:', err)
       throw new Error('Gagal membuat user baru')
@@ -73,7 +105,7 @@ export const useUsers = () => {
   }
 
   // PUT update user
-  const updateUser = async (id: number, payload: Partial<User>) => {
+  const update = async (id: number, payload: Partial<User>) => {
     try {
       await $fetch(`/users/${id}`, {
         baseURL: apiBase,
@@ -82,7 +114,6 @@ export const useUsers = () => {
         credentials: 'include',
         body: payload
       })
-      await fetchUsers()
     } catch (err) {
       console.error('Gagal update user:', err)
       throw new Error('Gagal memperbarui user')
@@ -90,7 +121,7 @@ export const useUsers = () => {
   }
 
   // DELETE user
-  const deleteUser = async (id: number) => {
+  const remove = async (id: number) => {
     try {
       await $fetch(`/users/${id}`, {
         baseURL: apiBase,
@@ -98,12 +129,23 @@ export const useUsers = () => {
         headers: getHeaders(),
         credentials: 'include'
       })
-      await fetchUsers()
     } catch (err) {
       console.error('Gagal hapus user:', err)
       throw new Error('Gagal menghapus user')
     }
   }
 
-  return { users, fetchUsers, createUser, updateUser, deleteUser, loading, error }
+  return { 
+    users, 
+    currentUser,
+    meta, 
+    fetchAll,  
+    fetchById,
+    create, 
+    update, 
+    remove,
+    loading, 
+    saving,
+    error 
+  }
 }

@@ -1,7 +1,3 @@
-import { ref } from 'vue'
-import { useApiUrl } from './useApiUrl'
-import { useCookie, useRuntimeConfig } from '#app'
-
 export interface Reflection {
   id: number
   date_post: string
