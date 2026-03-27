@@ -29,3 +29,8 @@ interface UserForm {
 interface AclForm {
   name: string
 }
+
+interface RoleForm {
+  organization_id: number
+  name: string
+}

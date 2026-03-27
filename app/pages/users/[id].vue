@@ -29,7 +29,7 @@ const form = ref<UserForm>({
 
 onMounted(async () => {
   const id = Number(route.params.id)
-  if (id) fetchById(id)
+  if (id) await fetchById(id)
 })
 
 watch(currentUser, (user) => {

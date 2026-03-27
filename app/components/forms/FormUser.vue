@@ -84,7 +84,7 @@ watch(
   { immediate: true }
 )
 
-onMounted(async () => await fetchAll())
+onMounted(fetchAll)
 </script>
 
 <template>
