@@ -70,7 +70,7 @@ const roleOptions = computed(() =>
 watch(
   [() => roles.value, () => form.value.role_id],
   ([rolesVal, roleId]) => {
-    if (!rolesVal.length || !roleId || props.isEdit) return
+    if (!rolesVal.length || !roleId || !props.isEdit) return
 
     const found = rolesVal.find(r => r.id === roleId)
 
@@ -84,7 +84,7 @@ watch(
   { immediate: true }
 )
 
-onMounted(fetchAll)
+onMounted(async () => await fetchAll())
 </script>
 
 <template>
@@ -103,7 +103,7 @@ onMounted(fetchAll)
 
     <!-- Password -->
     <div>
-      <label class="block mb-1 font-medium text-sm">Password <span :hidden="isEdit">Baru (Opsional)</span> <Mandatory :hidden="!isEdit"/></label>
+      <label class="block mb-1 font-medium text-sm">Password <span :hidden="!isEdit">Baru (Opsional)</span> <Mandatory :hidden="isEdit"/></label>
       <UInput
         v-model="form.password"
         type="password"

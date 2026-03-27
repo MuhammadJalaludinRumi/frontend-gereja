@@ -17,6 +17,7 @@ const form = ref<UserForm>({
 
 const submit = async () => {
   await create(form.value as User)
+  router.push("/users")
 }
 
 const cancel = () => {
@@ -31,7 +32,6 @@ const cancel = () => {
       :saving="saving"
       @submit="submit"
       @cancel="cancel"
-      is-edit
     />
   </DefaultForm>
 </template>

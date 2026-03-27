@@ -25,3 +25,7 @@ interface UserForm {
   is_active: boolean
   role_id: number
 }
+
+interface AclForm {
+  name: string
+}

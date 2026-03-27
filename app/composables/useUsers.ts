@@ -90,6 +90,8 @@ export const useUsers = () => {
   }
 
   const create = async (payload: User) => {
+    saving.value = true
+
     try {
       await $fetch('/users', {
         baseURL: apiBase,
@@ -100,12 +102,16 @@ export const useUsers = () => {
       })
     } catch (err) {
       console.error('Gagal create user:', err)
-      throw new Error('Gagal membuat user baru')
+      error.value = 'Gagal membuat user baru'
+    } finally { 
+      saving.value = false
     }
   }
 
   // PUT update user
   const update = async (id: number, payload: Partial<User>) => {
+    saving.value = true
+
     try {
       await $fetch(`/users/${id}`, {
         baseURL: apiBase,
@@ -116,7 +122,9 @@ export const useUsers = () => {
       })
     } catch (err) {
       console.error('Gagal update user:', err)
-      throw new Error('Gagal memperbarui user')
+      error.value ='Gagal memperbarui user'
+    } finally {
+      saving.value = false
     }
   }
 
@@ -131,7 +139,7 @@ export const useUsers = () => {
       })
     } catch (err) {
       console.error('Gagal hapus user:', err)
-      throw new Error('Gagal menghapus user')
+      error.value = 'Gagal menghapus user'
     }
   }
 

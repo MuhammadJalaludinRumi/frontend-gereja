@@ -1,14 +1,16 @@
-// composables/useAcls.ts
-import { ref } from 'vue'
-import { useApiUrl } from './useApiUrl'
-import { useCookie, useRuntimeConfig } from '#app'
+export interface Acl {
+  id: number
+  name: string
+  create_at: string
+}
 
 export const useAcls = () => {
   const apiBase = useApiUrl()  // ambil dari env
-  const acls = ref<any[]>([])
-  const acl = ref<any>(null)
+  const acls = ref<Acl[]>([])
+  const acl = ref<Acl | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const saving = shallowRef(false)
 
   const config = useRuntimeConfig()
   const isProd = config.public.sessionSecureCookie === 'true'
@@ -34,15 +36,17 @@ export const useAcls = () => {
     return headers
   }
 
-  const fetchAll = async () => {
+  const fetchAll = async (params?: { search?: string }) => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch('/acls', {
+      const res: Acl[] = await $fetch('/acls', {
         baseURL: apiBase,
         headers: getHeaders(),
-        credentials: 'include'
+        credentials: 'include',
+        params
       })
+
       acls.value = res
     } catch (err) {
       error.value = 'Gagal memuat data ACL'
@@ -56,7 +60,7 @@ export const useAcls = () => {
     loading.value = true
     error.value = null
     try {
-      const res = await $fetch(`/acls/${id}`, {
+      const res: Acl = await $fetch(`/acls/${id}`, {
         baseURL: apiBase,
         headers: getHeaders(),
         credentials: 'include'
@@ -71,6 +75,8 @@ export const useAcls = () => {
   }
 
   const create = async (payload: { name: string }) => {
+    saving.value = true
+
     try {
       const res = await $fetch('/acls', {
         baseURL: apiBase,
@@ -82,11 +88,15 @@ export const useAcls = () => {
       return res
     } catch (err) {
       console.error(err)
-      throw new Error('Gagal membuat ACL')
+      error.value = 'Gagal membuat ACL'
+    } finally {
+      saving.value = false
     }
   }
 
   const update = async (id: number, payload: { name: string }) => {
+    saving.value = true
+
     try {
       const res = await $fetch(`/acls/${id}`, {
         baseURL: apiBase,
@@ -98,7 +108,9 @@ export const useAcls = () => {
       return res
     } catch (err) {
       console.error(err)
-      throw new Error('Gagal memperbarui ACL')
+      error.value = 'Gagal memperbarui ACL'
+    } finally {
+      saving.value = false
     }
   }
 
@@ -112,10 +124,9 @@ export const useAcls = () => {
       })
     } catch (err) {
       console.error(err)
-      throw new Error('Gagal menghapus ACL')
+      error.value = 'Gagal menghapus ACL'
     }
   }
 
-  return { acls, acl, fetchAll, fetchById, create, update, remove, loading, error }
+  return { acls, acl, fetchAll, fetchById, create, update, remove, loading, saving, error }
 }
-//
