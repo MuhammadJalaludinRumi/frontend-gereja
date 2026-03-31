@@ -32,7 +32,7 @@ const columns = [
   {header: 'Role', accessorKey: 'role.name', id: 'role.name'}, 
 ]
 
-const handleDelete = async (row: any ) => {
+const handleDelete = async (row: any) => {
   await remove(row.id)
   await fetchAll()
 }

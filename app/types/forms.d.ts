@@ -34,3 +34,17 @@ interface RoleForm {
   organization_id: number
   name: string
 }
+
+interface RuleForm {
+  role_id: number
+  acl_id: number
+  permission: boolean
+}
+
+interface InvoiceForm {
+  organization_id: number
+  date: string
+  current_expiry: string
+  new_expiry: string
+  total: number
+}

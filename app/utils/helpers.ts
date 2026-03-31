@@ -37,3 +37,7 @@ export function $findOptions(
   if (!ids || !ids.length) return []
   return options.filter(opt => ids.includes(opt.value))
 }
+
+export function $formatCurrency(amount: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
+}

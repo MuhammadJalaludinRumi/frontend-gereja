@@ -39,17 +39,6 @@ watch(
   { deep: true }
 )
 
-const submit = () => {
-  if (!selectedOrganization.value.value || !form.value.name.trim()) {
-    formError.value = "Semua field harus diisi."
-    return
-  }
-
-  form.value.organization_id = selectedOrganization.value.value ?? 0
-
-  emit('submit')
-}
-
 const organizationOptions = computed(() => 
   organizations.value.map((organization) => ({
     value: organization.id,
@@ -73,6 +62,17 @@ watch(
   },
   { immediate: true }
 )
+
+const submit = () => {
+  if (!selectedOrganization.value.value || !form.value.name.trim()) {
+    formError.value = "Semua field harus diisi."
+    return
+  }
+
+  form.value.organization_id = selectedOrganization.value.value ?? 0
+
+  emit('submit')
+}
 
 onMounted(fetchAll)
 </script>
