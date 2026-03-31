@@ -64,6 +64,15 @@ const allLinks: NavigationMenuItem[] = [
     ]
   },
 
+  {
+    label: 'Lokasi', 
+    icon: 'i-lucide-map-pin',
+    children: [
+      { label: 'Provinsi', to: '/province', roles: [1] },
+      { label: 'Kota', to: '/city', roles: [1] }
+    ], 
+  },
+
   { 
     label: 'Pengguna',
     icon: 'i-lucide-user',
@@ -92,20 +101,19 @@ const allLinks: NavigationMenuItem[] = [
     ]
   },
 
-  {
-    label: 'Agenda',
-    icon: 'i-lucide-calendar-check',
-    to: '/events',
-    roles: [4]
+  { 
+    label: 'Data Lisensi', 
+    icon: 'i-lucide-award', 
+    children: [
+      { label: 'Lisensi', to: '/licenses', roles: [1] },
+      { label: 'Lisensi Organisasi', to: '/organizationLicense', roles: [1] },
+    ] 
   },
 
-  { label: 'Kota', icon: 'i-lucide-map-pin', to: '/city', roles: [1] },
-  { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
-  { label: 'Lisensi', icon: 'i-lucide-badge-check', to: '/licenses', roles: [1] },
-  { label: 'Berita', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
-  { label: 'Lisensi Organisasi', icon: 'i-lucide-file-badge', to: '/organizationLicense', roles: [1] },
+  { label: 'Agenda', icon: 'i-lucide-calendar-check', to: '/events', roles: [4] },
   { label: 'Organisasi', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
-  { label: 'Provinsi', icon: 'i-lucide-map', to: '/province', roles: [1] },
+  { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
+  { label: 'Berita', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
   { label: 'Pengumuman', icon: 'i-lucide-megaphone', to: '/announcement', roles: [1, 4] },
   { label: 'Renungan', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1, 4] },
   { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] }

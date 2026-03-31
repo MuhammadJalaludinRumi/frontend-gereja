@@ -1,8 +1,10 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
   title?: string
+  showAddButton?: boolean
 }>(), {
   title: 'Data',
+  showAddButton: true
 })
 
 const route = useRoute()
@@ -13,7 +15,7 @@ const route = useRoute()
     <Header
       :title="`Daftar ${title}`"
     >
-      <UButton :to="`${route.path}/create`" icon="i-heroicons-plus-circle" size="md" color="primary" :label="`Tambah ${title}`" />
+      <UButton v-if="showAddButton" :to="`${route.path}/create`" icon="i-heroicons-plus-circle" size="md" color="primary" :label="`Tambah ${title}`" />
     </Header>
     <slot/>
   </div>

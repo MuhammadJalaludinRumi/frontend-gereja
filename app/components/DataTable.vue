@@ -41,6 +41,7 @@ const route = useRoute()
 const sorting = ref<SortingState>([])
 const UButton = resolveComponent('UButton')
 const searchQuery = ref('')
+const searchEmitted = shallowRef('')
 
 const columns = computed(() => {
   return props.columns.map(col => {
@@ -86,40 +87,60 @@ const getValue = (obj: any, path: string) => {
   return path.split('.').reduce((acc, part) => acc?.[part], obj) ?? '-'
 }
 
+const submitSearch = () => {
+  searchEmitted.value = searchQuery.value
+  emit('search', searchQuery.value)
+}
+
+const removeSearch = () => {
+  searchQuery.value = ''
+  searchEmitted.value = ''
+  emit('search', '')
+}
+
 </script>
 
 <template>
-  <div v-if="showInputSearch" class="w-full flex justify-end item-center gap-2 mb-4">
-    <UInput 
-      v-model="searchQuery"
-      placeholder="Ketik untuk mencari..." 
-      type="text"
-      icon="i-heroicons-magnifying-glass"
-      @keyup.enter="$emit('search', searchQuery)"
-    >
-      <template v-if="searchQuery?.length" #trailing>
-        <UButton
-          color="neutral"
-          variant="link"
-          size="sm"
-          icon="i-lucide-x"
-          aria-label="Clear input"
-          @click="() => {
-            searchQuery = ''
-            $emit('search', '')
-          }"
-        />
-      </template>
-    </UInput>
-    
-    <UButton
-      color="primary"
-      variant="subtle"
-      size="md"
-      icon="i-heroicons-magnifying-glass"
-      class="cursor-pointer"
-      @click="$emit('search', searchQuery)"
-    />
+  <div v-if="showInputSearch" class="w-full flex flex-col justify-start gap-2 mb-4">
+    <div class="flex items-center gap-2">
+      <UInput 
+        v-model="searchQuery"
+        placeholder="Ketik untuk mencari..." 
+        type="text"
+        @keyup.enter="submitSearch"
+      >
+        <template v-if="searchQuery?.length" #trailing>
+          <UButton
+            color="neutral"
+            variant="link"
+            size="sm"
+            icon="i-lucide-x"
+            aria-label="Clear input"
+            @click="removeSearch"
+          />
+        </template>
+      </UInput>
+      
+      <UButton
+        color="primary"
+        label="Cari"
+        variant="subtle"
+        size="md"
+        icon="i-heroicons-magnifying-glass"
+        class="cursor-pointer"
+        @click="submitSearch"
+      />
+    </div>
+
+    <span v-if="searchEmitted" class="text-sm text-muted">
+      <span v-if="loading">
+        Mencari data dari 
+        <span class="font-bold text-primary">"{{ searchEmitted }}"</span> 
+      </span>
+      <span v-else>
+        Menunjukkan hasil yang dicari dari <span class="font-bold text-primary">"{{ searchEmitted }}"</span>
+      </span>
+    </span>
   </div>
 
   <UTable

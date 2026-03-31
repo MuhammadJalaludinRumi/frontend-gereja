@@ -1,95 +1,54 @@
-// composables/useProvinces.ts
-import { ref } from 'vue'
-import { useApiUrl } from './useApiUrl'
-import { useCookie, useRuntimeConfig } from '#app'
+interface Province {
+  id: number
+  name: string
+}
 
 export const useProvinces = () => {
-  const apiBase = useApiUrl()
-  const provinces = ref<any[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+  const provinces = ref<Province[]>([])
+  const province = ref<Province | null>(null)
 
-  const config = useRuntimeConfig()
-  const isProd = config.public.sessionSecureCookie === 'true'
+  const { request, loading, saving, error } = useApiFetch()
 
-  const xsrfToken = useCookie('XSRF-TOKEN').value
-  const token = useCookie('token').value
-
-  const getHeaders = (): Record<string, string> => {
-    const headers: Record<string, string> = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    }
-
-    if (isProd && xsrfToken) {
-      headers['X-XSRF-TOKEN'] = xsrfToken
-    }
-
-    if (!isProd && token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    return headers
+  const fetchAll = async (params?: { search?: string }) => {
+    provinces.value = await request<Province[]>('/province', 
+      { params }
+    )
   }
 
-  // GET ALL
-  const fetchAll = async () => {
-    loading.value = true
-    error.value = null
-    try {
-      const res = await $fetch('/province', {
-        baseURL: apiBase,
-        headers: getHeaders(),
-        credentials: 'include'
-      })
-      provinces.value = res
-    } catch (err) {
-      error.value = 'Gagal memuat data Province'
-      console.error(err)
-    } finally {
-      loading.value = false
-    }
+  const fetchById = async (id: number) => {
+    province.value = await request<Province>(`/province/${id}`)
   }
 
-  // CREATE
   const create = async (payload: any) => {
-    return await $fetch('/province', {
+    await request('/province', {
       method: 'POST',
-      baseURL: apiBase,
-      headers: getHeaders(),
-      credentials: 'include',
       body: payload
     })
   }
 
-  // UPDATE
   const update = async (id: number, payload: any) => {
-    return await $fetch(`/province/${id}`, {
+    await request(`/province/${id}`, {
       method: 'PUT',
-      baseURL: apiBase,
-      headers: getHeaders(),
-      credentials: 'include',
       body: payload
     })
   }
 
-  // DELETE
   const remove = async (id: number) => {
-    return await $fetch(`/province/${id}`, {
+    await request(`/province/${id}`, {
       method: 'DELETE',
-      baseURL: apiBase,
-      headers: getHeaders(),
-      credentials: 'include'
     })
   }
 
   return {
     provinces,
+    province,
     fetchAll,
+    fetchById,
     create,
     update,
     remove,
     loading,
+    saving,
     error
   }
 }

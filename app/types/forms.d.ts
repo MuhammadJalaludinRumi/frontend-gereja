@@ -48,3 +48,12 @@ interface InvoiceForm {
   new_expiry: string
   total: number
 }
+
+interface LicenseForm {
+  name: string
+  price: number
+}
+
+interface ProvinceForm {
+  name: string
+}
