@@ -7,13 +7,6 @@ interface Province {
   name: string
 }
 
-export interface City {
-  id: number
-  name: string
-  province_id: number
-  province_relation: Province
-}
-
 export interface Member {
   id?: number
   id_local?: string

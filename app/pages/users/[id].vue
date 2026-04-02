@@ -29,7 +29,7 @@ const form = ref<UserForm>({
 
 onMounted(async () => {
   const id = Number(route.params.id)
-  if (id) fetchById(id)
+  if (id) await fetchById(id)
 })
 
 watch(currentUser, (user) => {
@@ -45,7 +45,9 @@ watch(currentUser, (user) => {
 })
 
 const submit = async () => {
+  await update(Number(route.params.id), form.value)
 
+  router.push('/users')
 }
 
 const cancel = () => {
@@ -61,6 +63,7 @@ const cancel = () => {
       :error="error"
       @submit="submit"
       @cancel="cancel"
+      is-edit
     />
 
     <div class="w-full text-end mt-4">

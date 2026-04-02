@@ -1,119 +1,54 @@
-// composables/useRoles.ts
-import { ref } from 'vue'
-import { useApiUrl } from './useApiUrl'
-import { useCookie, useRuntimeConfig } from '#app'
-
 export interface Role {
   id: number
   organization_id: number
+  organization: Organization
   name: string
 }
 
 export const useRoles = () => {
-  const apiBase = useApiUrl()
   const roles = ref<Role[]>([])
   const role = ref<Role | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
 
-  const config = useRuntimeConfig()
-  const isProd = config.public.sessionSecureCookie === 'true'
+  const { request, loading, saving, error } = useApiFetch()
 
-  const xsrfToken = useCookie('XSRF-TOKEN').value
-  const token = useCookie('token').value
-
-  const getHeaders = (): Record<string, string> => {
-    const headers: Record<string, string> = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    }
-    if (isProd && xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
-    if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
-    return headers
-  }
-
-  const fetchAll = async () => {
-    loading.value = true
-    error.value = null
-    try {
-      const res: any = await $fetch('/roles', {
-        baseURL: apiBase,
-        headers: getHeaders(),
-        credentials: 'include'
-      })
-      roles.value = res
-    } catch (err) {
-      error.value = 'Gagal memuat data roles'
-      console.error(err)
-    } finally {
-      loading.value = false
-    }
+  const fetchAll = async (params?: { search?: string }) => {
+    roles.value = await request<Role[]>('/roles', { params })
   }
 
   const fetchById = async (id: number) => {
-    loading.value = true
-    error.value = null
-    try {
-      const res = await $fetch(`/roles/${id}`, {
-        baseURL: apiBase,
-        headers: getHeaders(),
-        credentials: 'include'
-      })
-      role.value = res
-    } catch (err) {
-      error.value = 'Gagal memuat role'
-      console.error(err)
-    } finally {
-      loading.value = false
-    }
+    role.value = await request<Role>(`/roles/${id}`)
   }
 
-  const create = async (payload: any) => {
-    try {
-      await $fetch('/roles', {
-        baseURL: apiBase,
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: payload
-      })
-      await fetchAll()
-    } catch (err) {
-      console.error(err)
-      throw new Error('Gagal membuat role')
-    }
+  const create = async (payload: RoleForm) => {
+    await request('/roles', {
+      method: 'POST',
+      body: payload
+    })    
   }
 
-  const update = async (id: number, payload: any) => {
-    try {
-      await $fetch(`/roles/${id}`, {
-        baseURL: apiBase,
-        method: 'PUT',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: payload
-      })
-      await fetchAll()
-    } catch (err) {
-      console.error(err)
-      throw new Error('Gagal memperbarui role')
-    }
+  const update = async (id: number, payload: RoleForm) => {
+    await request(`/roles/${id}`, {
+      method: 'PUT',
+      body: payload
+    })
   }
 
   const remove = async (id: number) => {
-    try {
-      await $fetch(`/roles/${id}`, {
-        baseURL: apiBase,
-        method: 'DELETE',
-        headers: getHeaders(),
-        credentials: 'include'
-      })
-      await fetchAll()
-    } catch (err) {
-      console.error(err)
-      throw new Error('Gagal menghapus role')
-    }
+    await request(`/roles/${id}`, {
+      method: 'DELETE',
+    })   
   }
 
-  return { roles, role, fetchAll, fetchById, create, update, remove, loading, error }
+  return { 
+    roles, 
+    role, 
+    fetchAll, 
+    fetchById, 
+    create, 
+    update, 
+    remove, 
+    loading,
+    saving, 
+    error 
+  }
 }

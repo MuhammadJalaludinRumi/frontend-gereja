@@ -1,130 +1,81 @@
-<template>
-  <div class="p-6 w-full overflow-hidden" style="color: var(--ui-text); background: var(--ui-bg);">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold" style="color: var(--ui-text-highlighted);">Daftar Groups</h1>
-      <UButton to="/groups/create" icon="i-heroicons-plus-circle" size="md" color="primary" label="Tambah Group" />
-    </div>
-
-    <!-- Search -->
-    <div class="mb-4">
-      <UInput v-model="search" placeholder="Cari group..." icon="i-heroicons-magnifying-glass" class="w-80" />
-    </div>
-
-    <!-- Table -->
-    <UCard :ui="{ body: { padding: '' } }" class="relative z-0 overflow-hidden">
-      <div class="overflow-x-auto w-full">
-        <table class="min-w-full table-auto border-collapse" style="color: var(--ui-text);">
-          <thead style="background: var(--ui-bg-muted); border-bottom: 1px solid var(--ui-border);">
-            <tr>
-              <th v-for="head in tableHeaders" :key="head" class="px-3 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap" style="color: var(--ui-text-highlighted);">{{ head }}</th>
-              <th class="px-3 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap" style="color: var(--ui-text-highlighted);">Action</th>
-            </tr>
-          </thead>
-          <tbody style="background: var(--ui-bg);">
-            <tr v-for="g in filteredGroups" :key="g.id" class="transition-colors" :style="{ borderBottom: '1px solid var(--ui-border)' }">
-              <td class="px-3 py-3 text-sm font-medium whitespace-nowrap" style="color: var(--ui-text-highlighted);">{{ g.name }}</td>
-              <td class="px-3 py-3 text-sm max-w-[200px] truncate">{{ g.address }}</td>
-              <td class="px-3 py-3 text-sm">{{ g.city?.name }}</td>
-              <td class="px-3 py-3 text-sm">{{ g.phone }}</td>
-              <td class="px-3 py-3 text-sm">{{ g.email }}</td>
-              <td class="px-3 py-3 text-sm">{{ g.website }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">
-                <img v-if="g.logo" :src="g.logo" alt="Logo" class="h-10 w-auto rounded border" style="border-color: var(--ui-border);" />
-              </td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ formatDate(g.founded) }}</td>
-              <td class="px-3 py-3 text-sm whitespace-nowrap">{{ formatDate(g.legal) }}</td>
-              <td class="px-3 py-3 text-center whitespace-nowrap">
-                <div class="flex justify-center gap-2">
-                  <UButton :to="`/groups/${g.id}`" icon="i-heroicons-pencil-square" size="xs" color="blue" variant="soft" label="Edit" />
-                  <UButton @click.stop="openDeleteModal(g)" icon="i-heroicons-trash" size="xs" color="red" variant="soft" label="Delete" />
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!filteredGroups.length">
-              <td colspan="9" class="p-4 text-center text-gray-500">Data tidak ditemukan</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </UCard>
-
-    <!-- Delete Modal -->
-    <Teleport to="body">
-      <div v-if="showDeleteModal" class="fixed inset-0 z-[99999] flex items-center justify-center" style="background: rgba(0, 0, 0, 0.5);">
-        <UCard class="max-w-md w-full mx-4" style="background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-border);">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold" style="color: var(--ui-text-highlighted);">Konfirmasi Hapus</h3>
-              <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid" @click="showDeleteModal = false" />
-            </div>
-          </template>
-          <div class="py-4">
-            <p style="color: var(--ui-text);">Yakin ingin menghapus <strong>{{ deleteTarget?.name }}</strong>?</p>
-          </div>
-          <template #footer>
-            <div class="flex justify-end gap-3">
-              <UButton color="gray" variant="soft" label="Batal" @click="showDeleteModal = false" />
-              <UButton color="red" label="Hapus" @click="confirmDelete" />
-            </div>
-          </template>
-        </UCard>
-      </div>
-    </Teleport>
-  </div>
-</template>
-
 <script setup lang="ts">
 definePageMeta({
   middleware: ['role'],
   roles: [1]
 })
 
-import { ref, computed, onMounted } from 'vue'
-import { useGroups } from '~/composables/useGroups'
+const { groups, fetchAll, remove, loading, error } = useGroups()
 
-const { getGroups, deleteGroup } = useGroups()
-const groups = ref<any[]>([])
-const search = ref('')
-const showDeleteModal = ref(false)
-const deleteTarget = ref<any>(null)
+const search = shallowRef('')
 
-const tableHeaders = ['Name', 'Address', 'City', 'Phone', 'Email', 'Website', 'Logo', 'Founded', 'Legal']
+watch(
+  (): [string] => [search.value],
+  async ([searchValue]: [string]) => {
+    await fetchAll({ search: searchValue })
+  } 
+)
 
-const fetchGroups = async () => {
-  const { data, error } = await getGroups()
-  if (error) console.error(error)
-  groups.value = data || []
+const columns = [
+  {header: '#', accessorKey: 'id', id: 'id'}, 
+  {header: 'Logo', accessorKey: 'logo', id: 'logo'},
+  {header: 'Nama', accessorKey: 'name', id: 'name'},
+  {header: 'Kota', accessorKey: 'city.name', id: 'city.name'},
+  {header: 'Alamat', accessorKey: 'address', id: 'address'},
+  {header: 'Telepon', accessorKey: 'phone', id: 'phone'},
+  {header: 'Email', accessorKey: 'email', id: 'email'},
+  {header: 'Website', accessorKey: 'website', id: 'website'}
+]
+
+const handleDelete = async (row: any) => {
+  await remove(row.id)
+  await fetchAll()
 }
 
-onMounted(fetchGroups)
-
-const filteredGroups = computed(() => {
-  if (!search.value) return groups.value
-  return groups.value.filter(g => g.name.toLowerCase().includes(search.value.toLowerCase()))
-})
-
-const formatDate = (value: string | null) => {
-  if (!value) return '-'
-  return value.split('T')[0]
+const onSearch = async (query: string) => {
+  search.value = query
 }
 
-const openDeleteModal = (group: any) => {
-  deleteTarget.value = group
-  showDeleteModal.value = true
-}
-
-const confirmDelete = async () => {
-  if (!deleteTarget.value) return
-  await deleteGroup(deleteTarget.value.id)
-  groups.value = groups.value.filter(g => g.id !== deleteTarget.value.id)
-  showDeleteModal.value = false
-  deleteTarget.value = null
-}
+onMounted(fetchAll)
 </script>
 
-<style scoped>
-.hovered-row {
-  background: var(--ui-bg-muted) !important;
-}
-</style>
+<template>
+  <DefaultList title="Yayasan">
+    <DataTable
+      type="Yayasan"
+      :data="groups"
+      :columns="columns"
+      :loading="loading"
+      :error="error"
+      @delete="handleDelete"
+      @search="onSearch"
+      @retry="fetchAll"
+    >
+      <template #logo-cell="{ row }">
+        <UAvatar
+          :src="row.original.logo"
+          size="xs"
+        />
+      </template>
+
+      <template #email-cell="{ row }">
+        <a 
+          :href="`mailto:${row.original.email}`" 
+          target="_blank"
+          class="text-primary hover:underline"
+        >
+          {{ row.original.email }}
+        </a>
+      </template>
+
+      <template #website-cell="{ row }">
+        <ULink 
+          :to="`https://${row.original.website}`" 
+          target="_blank"
+          class="text-primary hover:underline"
+        >
+          {{ row.original.website }}
+        </ULink>
+      </template>
+    </DataTable>
+  </DefaultList>
+</template>
