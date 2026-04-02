@@ -29,15 +29,6 @@ export function $age(dob: string) {
   return age
 }
 
-// Helper untuk mencari opsi berdasarkan array of ids 
-export function $findOptions(
-  options: { label: string; value: number }[],
-  ids?: number[] | null
-) {
-  if (!ids || !ids.length) return []
-  return options.filter(opt => ids.includes(opt.value))
-}
-
 export function $formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
 }

@@ -20,24 +20,12 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
-const form = ref({ ...props.modelValue })
+const form = computed({
+  get: () => props.modelValue,
+  set: (val) => emit("update:modelValue", val)
+})
 const formError = ref<string | null>(null)
 
-watch(
-  () => props.modelValue,
-  (val) => {
-    form.value = { ...val }
-  },
-  { deep: true }
-)
-
-watch(
-  form,
-  (val) => {
-    emit("update:modelValue", val)
-  },
-  { deep: true }
-)
 
 const organizationOptions = computed(() => 
   organizations.value.map((organization) => ({

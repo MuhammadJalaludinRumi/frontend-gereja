@@ -57,3 +57,31 @@ interface LicenseForm {
 interface ProvinceForm {
   name: string
 }
+
+interface OrganizationForm {
+  name?: string
+  abbreviation?: string
+  address?: string
+  city?: string | number
+  latitude?: number
+  longitude?: number
+  phone?: string
+  email?: string
+  group_id?: string | number
+  website?: string
+  logo?: File | string
+  founded?: string
+  legal?: string
+}
+
+interface GroupForm {
+  name?: string
+  address?: string
+  city?: string | number
+  phone?: string
+  email?: string
+  website?: string
+  logo?: File | string
+  founded?: string
+  legal?: string
+}

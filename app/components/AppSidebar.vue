@@ -82,6 +82,9 @@ const allLinks: NavigationMenuItem[] = [
     ]
   },
 
+  { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] },
+  { label: 'Organisasi', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
+
   // =======================
   // ASSET MANAGEMENT (DROPDOWN) - UPDATED
   // =======================
@@ -111,12 +114,10 @@ const allLinks: NavigationMenuItem[] = [
   },
 
   { label: 'Agenda', icon: 'i-lucide-calendar-check', to: '/events', roles: [4] },
-  { label: 'Organisasi', icon: 'i-lucide-users', to: '/organizations', roles: [1] },
   { label: 'Invoice', icon: 'i-lucide-receipt', to: '/invoices', roles: [1] },
   { label: 'Berita', icon: 'i-lucide-newspaper', to: '/news', roles: [1] },
   { label: 'Pengumuman', icon: 'i-lucide-megaphone', to: '/announcement', roles: [1, 4] },
   { label: 'Renungan', icon: 'i-lucide-book-alert', to: '/reflection', roles: [1, 4] },
-  { label: 'Yayasan', icon: 'i-lucide-building-2', to: '/groups', roles: [1] }
 ]
 
 // Detect user role

@@ -146,6 +146,7 @@ const removeSearch = () => {
   <UTable
     v-model:sorting="sorting"
     ref="table"
+    class="border-b border-default"
     :data="data" 
     :columns="columns" 
     :show-actions="showActions" 
@@ -231,7 +232,7 @@ const removeSearch = () => {
   </UTable>
 
   <!-- Pagination -->
-  <div v-if="pagination" class="flex justify-end border-t border-default pt-4 px-4 gap-2">
+  <div v-if="pagination" class="flex justify-end pt-4 px-4 gap-2">
     <USelect
       :model-value="pagination.pageSize"
       :items="[10, 20, 50]"

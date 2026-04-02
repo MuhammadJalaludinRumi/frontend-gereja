@@ -29,10 +29,6 @@ const submit = () => {
 
   emit('submit')
 }
-
-const cancel = () => {
-  emit('cancel')
-}
 </script>
 
 <template>

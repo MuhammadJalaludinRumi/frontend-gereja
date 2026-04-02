@@ -16,16 +16,23 @@ export const useApiFetch = () => {
     options: any = {}
   ): Promise<T> => {
     const method = (options.method || 'GET').toUpperCase()
-
     const isLoading = method === 'GET'
+
+    const isFormData = options.body instanceof FormData
 
     try {
       if (isLoading) startLoading()
       else startSaving()
 
+      const headers = getHeaders()
+
+      if (isFormData && headers['Content-Type']) {
+        delete headers['Content-Type']
+      }
+
       const res: any = await $fetch<T>(url, {
         baseURL: apiBase,
-        headers: getHeaders(),
+        headers: headers,
         credentials: 'include',
         ...options
       })

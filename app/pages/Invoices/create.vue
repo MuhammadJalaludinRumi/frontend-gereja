@@ -5,7 +5,7 @@ definePageMeta({
 })
 
 const router = useRouter()
-const { create, saving } = useInvoices()
+const { create, saving, error } = useInvoices()
 
 const form = ref<InvoiceForm>({
   organization_id: 0,
