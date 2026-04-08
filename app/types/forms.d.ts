@@ -85,3 +85,8 @@ interface GroupForm {
   founded?: string
   legal?: string
 }
+
+interface UserAuthorityForm {
+  user_id: number
+  role_id: number
+}
