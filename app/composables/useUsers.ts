@@ -8,38 +8,17 @@ export interface User {
 }
 
 export const useUsers = () => {
-  const apiBase = useApiUrl()
   const users = ref<User[]>([])
   const currentUser = ref<User | null>(null)
+  const userOptions = ref<SelectOption[]>([])
   const meta = ref<PaginationMeta>({
     total: 0,
     per_page: 10,
     current_page: 1,
     last_page: 1
   })
-  
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const saving = shallowRef(false)
 
-  const config = useRuntimeConfig()
-  const isProd = config.public.sessionSecureCookie === 'true'
-
-  // ambil token & xsrf
-  const xsrfToken = useCookie('XSRF-TOKEN').value
-  const token = useCookie('token').value
-
-  const getHeaders = (): Record<string, string> => {
-    const headers: Record<string, string> = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    }
-
-    if (isProd && xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken
-    if (!isProd && token) headers['Authorization'] = `Bearer ${token}`
-
-    return headers
-  }
+  const { request, requestPaginated, loading, saving, error } = useApiFetch()
 
   // GET semua user
   const fetchAll = async (params?: {
@@ -47,108 +26,50 @@ export const useUsers = () => {
     per_page?: number
     search?: string
   }) => {
-    loading.value = true
-    error.value = null
-    try {
-      const res = await $fetch<PaginatedResponse<User>>('/users', {
-        baseURL: apiBase,
-        headers: getHeaders(),
-        credentials: 'include',
-        params
-      })
-      
-      users.value = res.data
-      meta.value = {
-        total: res.total,
-        per_page: res.per_page,
-        current_page: res.current_page,
-        last_page: res.last_page
-      }
-    } catch (err) {
-      console.error('Gagal fetch users:', err)
-      error.value = 'Gagal memuat data users'
-    } finally {
-      loading.value = false
-    }
+    const response = await requestPaginated<User>('/users', { params })
+    
+    users.value = response.data
+    meta.value = response.meta
   }
 
   const fetchById = async (id: number) => {
-    loading.value = true
-
-    try {
-      currentUser.value = await $fetch(`/users/${id}`, {
-        baseURL: apiBase,
-        headers: getHeaders(),
-        credentials: 'include',
-      })
-    } catch (e) {
-      console.error('Gagal fetch users:', e)
-      error.value = 'Gagal memuat data users'
-    } finally {
-      loading.value = false
-    }
+    currentUser.value = await request<User>(`/users/${id}`)
   }
 
   const create = async (payload: User) => {
-    saving.value = true
-
-    try {
-      await $fetch('/users', {
-        baseURL: apiBase,
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: payload
-      })
-    } catch (err) {
-      console.error('Gagal create user:', err)
-      error.value = 'Gagal membuat user baru'
-    } finally { 
-      saving.value = false
-    }
+    await request('/users', {
+      method: 'POST',
+      body: payload
+    })
   }
 
   // PUT update user
   const update = async (id: number, payload: Partial<User>) => {
-    saving.value = true
-
-    try {
-      await $fetch(`/users/${id}`, {
-        baseURL: apiBase,
-        method: 'PUT',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: payload
-      })
-    } catch (err) {
-      console.error('Gagal update user:', err)
-      error.value ='Gagal memperbarui user'
-    } finally {
-      saving.value = false
-    }
+    await request(`/users/${id}`, {
+      method: 'PUT',
+      body: payload
+    })
   }
 
   // DELETE user
   const remove = async (id: number) => {
-    try {
-      await $fetch(`/users/${id}`, {
-        baseURL: apiBase,
-        method: 'DELETE',
-        headers: getHeaders(),
-        credentials: 'include'
-      })
-    } catch (err) {
-      console.error('Gagal hapus user:', err)
-      error.value = 'Gagal menghapus user'
-    }
+    await request(`/users/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  const fetchUserSelect = async (search: string) => {
+    userOptions.value = await request<SelectOption[]>('/users/select', { params: { search } })    
   }
 
   return { 
     users, 
     currentUser,
+    userOptions,
     meta, 
     fetchAll,  
     fetchById,
+    fetchUserSelect,
     create, 
     update, 
     remove,
