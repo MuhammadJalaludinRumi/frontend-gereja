@@ -7,15 +7,30 @@ export interface UserAuthority {
   role: Role
 }
 
-
 export const useUserAuthorities = () => {
   const userAuthorities = ref<UserAuthority[]>([])
   const userAuthority = ref<UserAuthority | null>(null)
 
-  const { request, loading, saving, error } = useApiFetch()
+  const { request, requestPaginated, loading, saving, error } = useApiFetch()
+  
+  const meta = ref<PaginationMeta>({
+    total: 0,
+    per_page: 10,
+    current_page: 1,
+    last_page: 1
+  })
 
-  const fetchAll = async (params?: { search?: string }) => {
-    userAuthorities.value = await request<UserAuthority[]>('/user-authorities', { params })
+  const fetchAll = async (params?: 
+    { 
+      page?: number
+      per_page?: number
+      search?: string 
+    }
+  ) => {
+    const response = await requestPaginated<UserAuthority>('/user-authorities', { params })
+    
+    userAuthorities.value = response.data
+    meta.value = response.meta
   }
 
   const fetchById = async (id: number) => {
@@ -46,6 +61,7 @@ export const useUserAuthorities = () => {
   return {
     userAuthorities,
     userAuthority,
+    meta,
     fetchAll,
     fetchById,
     create,

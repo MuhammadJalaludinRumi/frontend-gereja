@@ -90,3 +90,16 @@ interface UserAuthorityForm {
   user_id: number
   role_id: number
 }
+
+interface LicenseForm {
+  name: string
+  price: number
+}
+
+interface OrganizationLicenseForm {
+  organization_id: number
+  license_id: number
+  max_member: number
+  is_active: boolean
+  expiry: string
+}

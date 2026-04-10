@@ -4,15 +4,24 @@ definePageMeta({
   roles: [1]
 })
 
-const { userAuthorities, loading, error, fetchAll, remove } = useUserAuthorities()
+const { userAuthorities, meta, loading, error, fetchAll, remove } = useUserAuthorities()
+
+const pagination = ref({
+  pageIndex: 0,
+  pageSize: 10,
+})
 
 const search = shallowRef('')
 
 watch(
-  (): [string] => [search.value],
-  async ([searchValue]: [string]) => {
-    await fetchAll({ search: searchValue })
-  } 
+  (): [number, number, string] => [pagination.value.pageIndex, pagination.value.pageSize, search.value],
+  async ([pageIndex, pageSize, searchValue]: [number, number, string]) => {
+    await fetchAll({
+      page: pageIndex + 1,
+      per_page: pageSize,
+      search: searchValue
+    })
+  }
 )
 
 const columns = [
@@ -28,6 +37,11 @@ const handleDelete = async (row: any) => {
 
 const onSearch = async (query: string) => {
   search.value = query
+
+  pagination.value = {
+    ...pagination.value,
+    pageIndex: 0
+  }
 }
 
 onMounted(fetchAll)
@@ -41,6 +55,9 @@ onMounted(fetchAll)
       :columns="columns"
       :loading="loading"
       :error="error"
+      :total="meta.total"
+      :pagination="pagination"
+      @update:pagination="pagination = $event"
       @delete="handleDelete"
       @search="onSearch"
       @retry="fetchAll"
